@@ -1,8 +1,10 @@
 name: build
 
-# 每次推送都构建 x64 与 arm64 两套, 跑通 DDS/RPC 测试后发布 release。
+# 仅当 source/ 下的构建相关内容有改动时才触发 (纯文档/README 改动不构建)。
 on:
   push:
+    paths:
+      - 'source/**'
   workflow_dispatch:
 
 permissions:
@@ -26,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           # 动态获取 Fast DDS 版本: 优先 git tag, 退回解析其 CMakeLists 的 project() 版本。
-          VER="$(git -C Fast-DDS describe --tags --exact-match 2>/dev/null || true)"
+          VER="$(git -C source/Fast-DDS describe --tags --exact-match 2>/dev/null || true)"
           if [ -z "$VER" ]; then
-            VER="v$(sed -nE 's/^project\(fastdds VERSION "?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' Fast-DDS/CMakeLists.txt)"
+            VER="v$(sed -nE 's/^project\(fastdds VERSION "?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' source/Fast-DDS/CMakeLists.txt)"
           fi
           STAMP="$(TZ=Asia/Shanghai date +%Y%m%d%H%M)"   # 构建时间, UTC+8, 精确到分
           echo "fastdds_version=$VER"      >> "$GITHUB_OUTPUT"
@@ -58,13 +60,13 @@ jobs:
         id: cfg
         run: |
           set -euo pipefail
-          UBUNTU="$(sed -n "s/^[[:space:]]*Ubuntu-${{ matrix.arch }}[[:space:]]*=[[:space:]]*\([^#]*\).*/\1/p" config.ini | head -n1 | tr -d '[:space:]')"
+          UBUNTU="$(sed -n "s/^[[:space:]]*Ubuntu-${{ matrix.arch }}[[:space:]]*=[[:space:]]*\([^#]*\).*/\1/p" source/config.ini | head -n1 | tr -d '[:space:]')"
           echo "ubuntu=$UBUNTU" >> "$GITHUB_OUTPUT"
           echo "==> Ubuntu-${{ matrix.arch }} = $UBUNTU"
 
       - name: Build Fast DDS + run tests (inside ubuntu:${{ steps.cfg.outputs.ubuntu }})
         run: |
-          docker run --rm -v "$PWD:/repo" -w /repo \
+          docker run --rm -v "$PWD/source:/repo" -w /repo \
             -e FASTDDS_VERSION='${{ needs.meta.outputs.fastdds_version }}' \
             "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
             bash scripts/ci-build.sh
@@ -72,8 +74,8 @@ jobs:
       - name: Package install-${{ matrix.arch }}.tar.gz
         run: |
           set -euo pipefail
-          sudo chown -R "$(id -u):$(id -g)" "install-${{ matrix.arch }}"   # 容器内产物归 root
-          tar czf "install-${{ matrix.arch }}.tar.gz" "install-${{ matrix.arch }}"
+          sudo chown -R "$(id -u):$(id -g)" "source/install-${{ matrix.arch }}"   # 容器内产物归 root
+          tar czf "install-${{ matrix.arch }}.tar.gz" -C source "install-${{ matrix.arch }}"
           ls -lh "install-${{ matrix.arch }}.tar.gz"
 
       - name: Upload artifact

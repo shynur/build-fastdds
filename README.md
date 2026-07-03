@@ -4,33 +4,36 @@
 (foonathan_memory / Fast-CDR)，再用 **clang** 编译并运行测试用例。库与测试共享同一份
 `libstdc++`，因此可正常互链、运行。
 
-> Fast DDS 的具体版本由 `Fast-DDS/` 这个 git submodule 固定(升级时改 submodule 即可)，
+> Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定(升级时改 submodule 即可)，
 > 文档与 CI 都不写死版本号，而是运行时从 submodule 动态获取。
 
-每次推送都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次，跑通 DDS 与 RPC 测试后，
+所有构建相关内容都放在 `source/` 下；**只有 `source/` 有改动时才会触发 CI**(纯文档改动不构建)。
+每次触发都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次，跑通 DDS 与 RPC 测试后，
 把安装目录打包成 `install-{x64,arm64}.tar.gz` 发布为 release。
 
 ## 目录结构
 
 ```
 build-fastdds/
-├─ config.ini                       # 构建配置 (系统版本 / 编译器 / 构建类型)
-├─ Fast-DDS/                        # 子模块 (版本由 submodule 固定，含 thirdparty/fastcdr)
-├─ third_party/
-│  └─ foonathan_memory/             # 子模块 (Fast DDS 的依赖，版本由 submodule 固定)
-├─ patches/
-│  └─ fastcdr-in-class-explicit-spec.patch
-├─ tests/
-│  ├─ dds/                          # 1 publisher + 2 subscribers
-│  └─ rpc/                          # RPC calculator client/server
-├─ scripts/
-│  ├─ lib.sh                        # 公共函数 (解析 config / 解析编译器名)
-│  ├─ setup-toolchain.sh            # 装 g++ / clang / CMake 3.31.12
-│  ├─ apply-patch.sh                # 按需打补丁 (探测编译器决定)
-│  ├─ build-fastdds.sh              # 用 g++ 编译三件套 -> install-<arch>/
-│  ├─ run-tests.sh                  # 用 clang 编译并运行 DDS / RPC 测试
-│  └─ ci-build.sh                   # 容器内入口: 依次调用上面四步
-└─ .github/workflows/build.yml      # CI: 构建 -> 测试 -> 发布 release
+├─ README.md
+├─ .github/workflows/build.yml      # CI: 构建 -> 测试 -> 发布 release (仅 source/ 改动触发)
+└─ source/                          # 所有构建相关内容; 只有它改动才触发 CI
+   ├─ config.ini                    # 构建配置 (系统版本 / 编译器 / 构建类型)
+   ├─ Fast-DDS/                     # 子模块 (版本由 submodule 固定，含 thirdparty/fastcdr)
+   ├─ third_party/
+   │  └─ foonathan_memory/          # 子模块 (Fast DDS 的依赖，版本由 submodule 固定)
+   ├─ patches/
+   │  └─ fastcdr-in-class-explicit-spec.patch
+   ├─ tests/
+   │  ├─ dds/                       # 1 publisher + 2 subscribers
+   │  └─ rpc/                       # RPC calculator client/server
+   └─ scripts/
+      ├─ lib.sh                     # 公共函数 (解析 config / 解析编译器名)
+      ├─ setup-toolchain.sh         # 装 g++ / clang / CMake 3.31.12
+      ├─ apply-patch.sh             # 按需打补丁 (探测编译器决定)
+      ├─ build-fastdds.sh           # 用 g++ 编译三件套 -> install-<arch>/
+      ├─ run-tests.sh               # 用 clang 编译并运行 DDS / RPC 测试
+      └─ ci-build.sh                # 容器内入口: 依次调用上面四步
 ```
 
 ## config.ini
@@ -94,19 +97,22 @@ test-cxx-arm64=clang-12
    生成 release tag `<版本号>+<北京时间 yyyymmddHHMM>`(形如 `vX.Y.Z+202607021830`)。
 2. **build**(x64 / arm64 各一，分别跑在 `ubuntu-latest` 与 `ubuntu-24.04-arm` runner 上):
    1. `checkout`(含子模块)。
-   2. 依 `config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器，挂载仓库，运行
+   2. 依 `source/config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器，挂载 `source/`，运行
       `scripts/ci-build.sh`:装工具链 → 按需打补丁 → 用 g++ 编译三件套到 `install-<arch>/`
       → 校验 libstdc++ 一致性 → 用 clang 编译并运行 DDS / RPC 测试。
    3. 打包 `install-<arch>.tar.gz` 并上传为 artifact。
 3. **release**(仅 `push`):下载两份 artifact，以上面的 tag 建 release，附件为两个 `.tar.gz`。
+
+> 触发条件:`push` 事件仅在 `source/**` 有改动时才跑(见 workflow 的 `on.push.paths`)；
+> 也可在 Actions 页面用 `workflow_dispatch` 手动触发。
 
 ## 本地复现
 
 ```bash
 git clone --recursive https://github.com/<you>/build-fastdds
 cd build-fastdds
-# 在配置指定的容器里跑完整流程 (x64 为例):
-docker run --rm -v "$PWD:/repo" -w /repo ubuntu:18.04 bash scripts/ci-build.sh
+# 在配置指定的容器里跑完整流程 (x64 为例); 注意挂载的是 source/:
+docker run --rm -v "$PWD/source:/repo" -w /repo ubuntu:18.04 bash scripts/ci-build.sh
 ```
 
-产物在 `install-x64/`(或 `install-arm64/`)，测试日志会打印在终端。
+产物在 `source/install-x64/`(或 `source/install-arm64/`)，测试日志会打印在终端。

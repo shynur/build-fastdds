@@ -1,5 +1,5 @@
-/build-x64/
-/build-arm64/
-/install-x64/
-/install-arm64/
+/source/build-x64/
+/source/build-arm64/
+/source/install-x64/
+/source/install-arm64/
 *.tar.gz
