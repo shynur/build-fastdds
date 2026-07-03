@@ -6,7 +6,7 @@
 #   - RPC: server + client, 断言四种调用结果正确, 且 server 收到 SIGTERM 后干净退出.
 #
 # 运行前先「机器校验」clang 与 g++ 依赖同一份 libstdc++ (需求硬约束):
-#   (a) clang 编译期选中的 GCC 版本 == cxx 的 g++ 版本;
+#   (a) clang 编译期选中的 GCC 版本 = cxx 的 g++ 版本;
 #   (b) 生成的可执行文件运行期链接 libstdc++.so.6 (而非 libc++).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -26,7 +26,7 @@ export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH:-}"
 fail() { echo "TEST FAILURE: $*" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
-# (a) 编译期: clang 选中的 GCC == cxx 的 g++
+# (a) 编译期: clang 选中的 GCC = cxx 的 g++
 # ---------------------------------------------------------------------------
 gcc_major="$("${CXX}" -dumpversion | cut -d. -f1)"
 clang_gcc_major="$("${TESTCXX}" -v -x c++ -E /dev/null 2>&1 \

@@ -25,24 +25,10 @@
   1. clang 编译期 `Selected GCC installation` 的版本号 = `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
 
-## 测试类型代码 (fastddsgen 生成, 不入库)
+## 测试
 
-`source/tests/` 下只提交 **IDL 与手写源** (publisher / subscriber / client / server 及各自的
-`CMakeLists.txt`); 由 IDL 经 `fastddsgen` 生成的类型/RPC 代码 (`src/types/` 下的
-`*.hpp` / `*.cxx` / `*.ipp`) **不入库**, 在 CI 期间现生成 (见 `.gitignore`).
-
-- **生成器版本**不写死, 取自 Fast-DDS submodule 自带的 `source/Fast-DDS/fastdds.repos`
-  (与 `fastdds` / `fastcdr` 并列固定); 升级 Fast-DDS submodule 时自动跟随.
-- **两段式**: `fastddsgen` 是 Java 工具, 故与只装 `g++`/clang 的构建容器分离 ——
-  CI 的 `generate` 作业 (JDK 环境) 构建生成器并生成代码, 打包为 artifact 喂给各架构的 `build` 作业.
-- 两个测试统一采用 `<test>/src/{手写源}` + `<test>/src/types/{idl + 生成物}` 的布局.
-
-本地要完整构建/测试时, 先在有 **JDK 11 + git** 的环境里生成一次:
-
-```sh
-export PATH="$(bash source/scripts/build-fastddsgen.sh):$PATH"   # 构建 fastddsgen (版本取自 fastdds.repos)
-bash source/scripts/gen-types.sh                                  # 就地生成到 tests/*/src/types/
-```
+`source/tests/` 下 DDS 与 RPC 两个用例只提交 IDL 与手写源; 类型/RPC 代码由 `fastddsgen`
+从 IDL 生成, **不入库**, 于 CI 期间现生成 (见 `.gitignore`).
 
 ## 补丁
 
