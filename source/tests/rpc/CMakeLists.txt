@@ -11,7 +11,7 @@ find_package(fastcdr 2 REQUIRED)
 find_package(fastdds 3 REQUIRED)
 find_package(Threads REQUIRED)
 
-# fastddsgen 生成的类型/RPC 代码, 打成一个静态库供 client 与 server 复用 (只编译一次)。
+# fastddsgen 生成的类型/RPC 代码, 打成一个静态库供 client 与 server 复用 (只编译一次).
 add_library(calculator_gen STATIC)
 target_sources(calculator_gen
     PRIVATE
