@@ -11,31 +11,6 @@
 每次触发都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次，跑通 DDS 与 RPC 测试后，
 把安装目录打包成 `install-{x64,arm64}.tar.gz` 发布为 release。
 
-## 目录结构
-
-```
-build-fastdds/
-├─ README.md
-├─ .github/workflows/build.yml      # CI: 构建 -> 测试 -> 发布 release (仅 source/ 改动触发)
-└─ source/                          # 所有构建相关内容; 只有它改动才触发 CI
-   ├─ config.ini                    # 构建配置 (系统版本 / 编译器 / 构建类型)
-   ├─ Fast-DDS/                     # 子模块 (版本由 submodule 固定，含 thirdparty/fastcdr)
-   ├─ third_party/
-   │  └─ foonathan_memory/          # 子模块 (Fast DDS 的依赖，版本由 submodule 固定)
-   ├─ patches/
-   │  └─ fastcdr-in-class-explicit-spec.patch
-   ├─ tests/
-   │  ├─ dds/                       # 1 publisher + 2 subscribers
-   │  └─ rpc/                       # RPC calculator client/server
-   └─ scripts/
-      ├─ lib.sh                     # 公共函数 (解析 config / 解析编译器名)
-      ├─ setup-toolchain.sh         # 装 g++ / clang / CMake 3.31.12
-      ├─ apply-patch.sh             # 按需打补丁 (探测编译器决定)
-      ├─ build-fastdds.sh           # 用 g++ 编译三件套 -> install-<arch>/
-      ├─ run-tests.sh               # 用 clang 编译并运行 DDS / RPC 测试
-      └─ ci-build.sh                # 容器内入口: 依次调用上面四步
-```
-
 ## config.ini
 
 ```ini
