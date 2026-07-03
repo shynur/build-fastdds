@@ -8,7 +8,7 @@
 > 文档与 CI 都不写死版本号,而是运行时从 submodule 动态获取。
 
 每次推送都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次,跑通 DDS 与 RPC 测试后,
-把安装目录打包成 `install-x64.tar.gz` / `install-arm64.tar.gz` 发布为 release。
+把安装目录打包成 `install-{x64,arm64}.tar.gz` 发布为 release。
 
 ## 目录结构
 
