@@ -1,8 +1,11 @@
 # build-fastdds
 
-用 **g++** 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) `v3.4.3` 及其依赖
+用 **g++** 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) 及其依赖
 (foonathan_memory / Fast-CDR),再用 **clang** 编译并运行测试用例。库与测试共享同一份
 `libstdc++`,因此可正常互链、运行。
+
+> Fast DDS 的具体版本由 `Fast-DDS/` 这个 git submodule 固定(升级时改 submodule 即可),
+> 文档与 CI 都不写死版本号,而是运行时从 submodule 动态获取。
 
 每次推送都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次,跑通 DDS 与 RPC 测试后,
 把安装目录打包成 `install-x64.tar.gz` / `install-arm64.tar.gz` 发布为 release。
@@ -12,9 +15,9 @@
 ```
 build-fastdds/
 ├─ config.ini                       # 构建配置 (系统版本 / 编译器 / 构建类型)
-├─ Fast-DDS/                        # 子模块, 固定在 v3.4.3 (含 thirdparty/fastcdr)
+├─ Fast-DDS/                        # 子模块 (版本由 submodule 固定, 含 thirdparty/fastcdr)
 ├─ third_party/
-│  └─ foonathan_memory/             # 子模块, 固定在 v0.7-3 (Fast DDS 的依赖)
+│  └─ foonathan_memory/             # 子模块 (Fast DDS 的依赖, 版本由 submodule 固定)
 ├─ patches/
 │  └─ fastcdr-in-class-explicit-spec.patch
 ├─ tests/
@@ -87,8 +90,8 @@ test-cxx-arm64=clang-12
 
 `.github/workflows/build.yml`:
 
-1. **meta**:`checkout`(含子模块),`git describe` 取 Fast DDS 版本号,生成 release tag
-   `v3.4.3+<北京时间 yyyymmddHHMM>`(如 `v3.4.3+202607021830`)。
+1. **meta**:`checkout`(含子模块),`git describe` 从 submodule 动态取出 Fast DDS 版本号,
+   生成 release tag `<版本号>+<北京时间 yyyymmddHHMM>`(形如 `vX.Y.Z+202607021830`)。
 2. **build**(x64 / arm64 各一,分别跑在 `ubuntu-latest` 与 `ubuntu-24.04-arm` runner 上):
    1. `checkout`(含子模块)。
    2. 依 `config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器,挂载仓库,运行
