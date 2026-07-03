@@ -11,30 +11,10 @@
 每次触发都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次，跑通 DDS 与 RPC 测试后，
 把安装目录打包成 `install-{x64,arm64}.tar.gz` 发布为 release。
 
-## config.ini
+## 配置
 
-```ini
-CMAKE_BUILD_TYPE=Debug
-Ubuntu-x64=18.04
-Ubuntu-arm64=20.04
-cxx-x64=g++-7
-cxx-arm64=g++-9
-test-cxx-x64=clang-6
-test-cxx-arm64=clang-12
-```
-
-| 键                    | 含义                                             |
-| --------------------- | ------------------------------------------------ |
-| `CMAKE_BUILD_TYPE`    | 构建类型 (Debug / Release / …)                   |
-| `Ubuntu-{x64,arm64}`  | 构建环境: 使用 `ubuntu:<VER>` 容器镜像           |
-| `cxx-{x64,arm64}`     | 编译 Fast DDS 相关库的编译器 (g++)               |
-| `test-cxx-{x64,arm64}`| 编译测试用例的编译器 (clang，与 `cxx` 共享 libstdc++) |
-
-> **INI 语法说明**:该文件是「无 `[section]` 头的 `key=value`」属性文件(properties 风格)。
-> 我们用 shell 解析它(`scripts/lib.sh` 里的 `cfg()`)，这样完全合法。但如果你打算用
-> **Python 的 `configparser`** 直接读它，会报 `MissingSectionHeaderError` —— 那种解析器
-> 要求文件顶部有一个 section 头。若需要兼容 `configparser`，在文件最前面加一行
-> `[build]` 即可，shell 解析这一行会被自动忽略。我们不用 `configparser`，故保持精简。
+构建类型、各架构的容器镜像与编译器等,集中在 `source/config.ini` 里配置,
+各键的含义与语法说明见该文件内的注释。
 
 ## g++ / clang 分工与 libstdc++ 一致性
 
