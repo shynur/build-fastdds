@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/build-fastdds.sh - 用 config.ini 指定的 cxx (g++) 编译整套 Fast DDS 依赖,
-# 全部安装到 install-{arch}/.
+# 全部安装到 install-<arch>/.
 #
 # 依赖构建顺序 (与既定的, 已验证可用的配方一致):
 #   foonathan_memory (静态, PIC)  ->  Fast-CDR (共享)  ->  Fast-DDS (共享)

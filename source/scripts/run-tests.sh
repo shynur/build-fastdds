@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/run-tests.sh - 用 config.ini 指定的 test-cxx (clang) 编译并运行两个测试用例,
-# 链接 install-{arch}/ 里那套用 g++ 构建的 Fast DDS.
+# 链接 install-<arch>/ 里那套用 g++ 构建的 Fast DDS.
 #
 #   * DDS: 1 个 publisher + 2 个 subscriber, 断言两个 subscriber 都收到数据.
 #   * RPC: server + client, 断言四种调用结果正确, 且 server 收到 SIGTERM 后干净退出.

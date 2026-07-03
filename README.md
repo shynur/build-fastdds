@@ -9,7 +9,7 @@
 
 所有构建相关内容都放在 `source/` 下; **只有 `source/` 有改动时才会触发 CI** (纯文档改动不构建).
 每次触发都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次, 跑通 DDS 与 RPC 测试后,
-把安装目录打包成 `install-{x64,arm64}.tar.gz` 发布为 release.
+把安装目录打包成 `install-<arch>.tar.gz` 发布为 release.
 
 ## 配置
 
