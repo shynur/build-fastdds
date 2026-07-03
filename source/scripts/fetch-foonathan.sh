@@ -20,12 +20,10 @@ DEST="${REPO_ROOT}/third_party/foonathan_memory"
 
 # --- 1. 从 fastdds.repos 解析 vendor 的 url + version ---
 # 定位 foonathan_memory_vendor: 块, 取其后的第一个 url: / version: 字段.
-# 注意: 用 awk 默认按空白分列 (leading 空白已被剥离, $1 即首个 token), 刻意「不用」
-# [[:space:]] 之类 POSIX 字符类 -- 构建容器 (ubuntu:18.04) 的 awk 是 mawk 1.3.3, 不支持
-# POSIX 类, 用了会「静默不匹配」.
+# (awk 由 setup-toolchain 装的 gawk 提供, 故可放心用 [[:space:]] 这类 POSIX 字符类.)
 vendor_field() {   # $1 = 字段名 (url / version)
     awk -v k="$1:" '
-        $1 == "foonathan_memory_vendor:" { f = 1; next }
+        /^[[:space:]]*foonathan_memory_vendor:/ { f = 1 }
         f && $1 == k { print $2; exit }
     ' "${REPOS}"
 }
@@ -43,11 +41,10 @@ git clone --depth 1 -b "${VENDOR_VER}" "${VENDOR_URL}" "${VENDOR_DIR}" >&2
 VCM="${VENDOR_DIR}/CMakeLists.txt"
 [ -f "${VCM}" ] || { echo "vendor 仓库缺少 CMakeLists.txt: ${VCM}" >&2; exit 1; }
 # externalproject_add(foo_mem-ext ... GIT_REPOSITORY <url> GIT_TAG <tag> ...); 各参数分行.
-# 用 index() 做纯字符串定位 (CMake 命令名大小写不敏感, 故先 tolower), 同样避开 POSIX
-# 字符类 -- 见上面对 mawk 1.3.3 的说明.
+# CMake 命令名大小写不敏感, 故定位块时统一小写比较.
 ext_field() {      # $1 = GIT_REPOSITORY / GIT_TAG
     awk -v k="$1" '
-        index(tolower($0), "externalproject_add(foo_mem-ext") { f = 1 }
+        tolower($0) ~ /externalproject_add\([[:space:]]*foo_mem-ext/ { f = 1 }
         f && $1 == k { print $2; exit }
     ' "${VCM}"
 }

@@ -19,7 +19,11 @@ echo ">> arch=${ARCH}  cxx=${CXX_SPEC}  test-cxx=${TESTCXX_SPEC}"
 
 apt-get update
 apt-get install -y --no-install-recommends \
-    ca-certificates wget make git patch tar xz-utils file
+    ca-certificates wget make git patch tar xz-utils file gawk
+
+# 用 gawk 作为容器的 awk (ubuntu:18.04 自带的是 mawk 1.3.3, 不支持 [[:space:]] 等
+# POSIX 字符类, 脚本里的解析会静默失配). 装上 gawk 并设为默认, 让所有 awk 调用走 gawk.
+update-alternatives --set awk /usr/bin/gawk
 
 apt_install_cxx "${CXX_SPEC}"       # g++-N (会带上匹配的 libstdc++-N-dev)
 apt_install_cxx "${TESTCXX_SPEC}"   # clang-M
