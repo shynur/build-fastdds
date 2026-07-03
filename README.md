@@ -1,6 +1,6 @@
 # build-fastdds
 
-用 **g++** 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) 及其依赖
+用 `g++` 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) 及其依赖
 (foonathan_memory / Fast-CDR), 再用 **clang** 编译并运行测试用例.
 库与测试共享同一份 `libstdc++`, 因此可正常互链, 运行.
 
@@ -11,21 +11,21 @@
 构建类型, 各架构的容器镜像与编译器等, 集中在 `source/config.ini` 里配置,
 各键的含义与语法说明见该文件内的注释.
 
-## g++ / clang 分工与 libstdc++ 一致性
+## `g++` / clang 分工与 `libstdc++` 一致性
 
-- **库 (foonathan_memory / Fast-CDR / Fast-DDS) 一律用 `cxx` (g++) 编译**; 测试用例用
+- **库 (foonathan_memory / Fast-CDR / Fast-DDS) 一律用 `cxx` (`g++`) 编译**; 测试用例用
   `test-cxx` (clang) 编译.  二者链接同一份 `libstdc++.so.6`, 遵循同一套 Itanium C++ ABI,
   故可混合链接, 正常运行.
-- **一致性如何保证**: 容器里「只装一个」g++ 版本 (即 `cxx`).  clang 默认会选系统里版本号
+- **一致性如何保证**: 容器里「只装一个」`g++` 版本 (即 `cxx`).  clang 默认会选系统里版本号
   最高的 GCC 工具链; 既然只有一个, 就没有歧义, clang 自然选中它的 `libstdc++`.
   `run-tests.sh` 还会**机器校验**两点:
-  1. clang 编译期 `Selected GCC installation` 的版本号 == g++ 的版本号;
+  1. clang 编译期 `Selected GCC installation` 的版本号 == `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
 
 ## 补丁
 
 `clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.sh` 在 `test-cxx`
-为 `clang-6` 时打上 `source/patches/` 下的补丁 (对 g++ 构建库本身是 **no-op**).
+为 `clang-6` 时打上 `source/patches/` 下的补丁 (对 `g++` 构建库本身是 **no-op**).
 
 ## CI
 

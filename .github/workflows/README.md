@@ -10,8 +10,8 @@
 2. **build** (x64 / arm64 各一, 分别跑在 `ubuntu-latest` 与 `ubuntu-24.04-arm` runner 上):
    1. `checkout` (含子模块).
    2. 依 `source/config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器, 挂载 `source/`, 运行
-      `scripts/ci-build.sh`: 装工具链 → 按需打补丁 → 用 g++ 编译三件套到 `install-<arch>/`
-      → 校验 libstdc++ 一致性 → 用 clang 编译并运行 DDS / RPC 测试.
+      `scripts/ci-build.sh`: 装工具链 → 按需打补丁 → 用 `g++` 编译三件套到 `install-<arch>/`
+      → 校验 `libstdc++` 一致性 → 用 clang 编译并运行 DDS / RPC 测试.
    3. 打包 `install-<arch>.tar.gz` 并上传为 artifact.
 3. **release** (仅 `push`): 下载两份 artifact, 以上面的 tag 建 release, 附件为两个 `.tar.gz`.
 
