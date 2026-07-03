@@ -37,15 +37,16 @@
 g++ 编译库本身而言, 补丁前后展开结果完全相同, 是 **no-op** -- 即便打了补丁也绝不会改变 g++
 构建出的库.
 
-> 补充: 在 **arm64** 上, `clang-6` 会**错误编译** Fast DDS 生成的类型支持代码, 运行期抛
-> `std::bad_function_call` 崩溃; 改用 `clang-12` 则正常.  这就是 arm64 选用 `clang-12` 的原因.
+> 补充:
+> 在 **arm64** 上, `clang-6` 会**错误编译** Fast DDS 生成的类型支持代码, 运行期抛
+> `std::bad_function_call` 崩溃.
 
 ## CI 构建流程
 
-`.github/workflows/build.yml`:
+`.github/workflows/build.yaml`:
 
 1. **meta**: `checkout` (含子模块), `git describe` 从 submodule 动态取出 Fast DDS 版本号,
-   生成 release tag `<版本号>+<北京时间 yyyymmddHHMM>` (形如 `vX.Y.Z+202607021830`).
+   生成 release tag `<版本号>+<北京时间 yyyymmddHHMM>`.
 2. **build** (x64 / arm64 各一, 分别跑在 `ubuntu-latest` 与 `ubuntu-24.04-arm` runner 上):
    1. `checkout` (含子模块).
    2. 依 `source/config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器, 挂载 `source/`, 运行
@@ -56,14 +57,3 @@ g++ 编译库本身而言, 补丁前后展开结果完全相同, 是 **no-op** -
 
 > 触发条件: `push` 事件仅在 `source/**` 有改动时才跑 (见 workflow 的 `on.push.paths`);
 > 也可在 Actions 页面用 `workflow_dispatch` 手动触发.
-
-## 本地复现
-
-```bash
-git clone --recursive https://github.com/<you>/build-fastdds
-cd build-fastdds
-# 在配置指定的容器里跑完整流程 (x64 为例); 注意挂载的是 source/:
-docker run --rm -v "$PWD/source:/repo" -w /repo ubuntu:18.04 bash scripts/ci-build.sh
-```
-
-产物在 `source/install-x64/` (或 `source/install-arm64/`), 测试日志会打印在终端.
