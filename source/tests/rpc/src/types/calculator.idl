@@ -1,5 +1,5 @@
 // calculator.idl - 一个简单但完整的 RPC 服务接口:
-//   - 演示 out 参数、in 参数、返回值、以及自定义 exception (raises)
+//   - 演示 out 参数, in 参数, 返回值, 以及自定义 exception (raises)
 module calculator_example
 {
     // 当运算结果无法用 32 位整数表示时抛出
@@ -14,7 +14,7 @@ module calculator_example
                 out long min_value,
                 out long max_value);
 
-        // 返回 value1 + value2 (演示 in 参数、返回值与异常)
+        // 返回 value1 + value2 (演示 in 参数, 返回值与异常)
         long addition(
                 in long value1,
                 in long value2) raises (OverflowException);
