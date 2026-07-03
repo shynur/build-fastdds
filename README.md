@@ -4,7 +4,7 @@
 (foonathan_memory / Fast-CDR), 再用 **clang** 编译并运行测试用例.
 库与测试共享同一份 `libstdc++`, 因此可正常互链, 运行.
 
-> Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可),
+> Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可).
 
 ## 配置
 
@@ -13,11 +13,14 @@
 
 ## `g++` / clang 分工与 `libstdc++` 一致性
 
+两个编译器都按架构在 `source/config.ini` 里配置: `cxx-<arch>` 是编库用的 `g++`,
+`test-cxx-<arch>` 是编测试用的 clang.  下文用 `cxx` / `test-cxx` 指代这两个键选出的编译器.
+
 - **库 (foonathan_memory / Fast-CDR / Fast-DDS) 一律用 `cxx` (`g++`) 编译**; 测试用例用
   `test-cxx` (clang) 编译.  二者链接同一份 `libstdc++.so.6`, 遵循同一套 Itanium C++ ABI,
   故可混合链接, 正常运行.
-- **一致性如何保证**: 容器里「只装一个」`g++` 版本 (即 `cxx`).  clang 默认会选系统里版本号
-  最高的 GCC 工具链; 既然只有一个, 就没有歧义, clang 自然选中它的 `libstdc++`.
+- **一致性如何保证**: 容器里「只装一个」`g++` 版本 (即 `cxx` 选中的那个).  clang 默认会选
+  系统里版本号最高的 GCC 工具链; 既然只有一个, 就没有歧义, clang 自然选中它的 `libstdc++`.
   `run-tests.sh` 还会**机器校验**两点:
   1. clang 编译期 `Selected GCC installation` 的版本号 == `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
