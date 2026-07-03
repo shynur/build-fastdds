@@ -1,14 +1,10 @@
 # build-fastdds
 
 用 **g++** 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) 及其依赖
-(foonathan_memory / Fast-CDR), 再用 **clang** 编译并运行测试用例.  库与测试共享同一份
-`libstdc++`, 因此可正常互链, 运行.
+(foonathan_memory / Fast-CDR), 再用 **clang** 编译并运行测试用例.
+库与测试共享同一份 `libstdc++`, 因此可正常互链, 运行.
 
 > Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可),
-> 文档与 CI 都不写死版本号, 而是运行时从 submodule 动态获取.
-
-所有构建相关内容都放在 `source/` 下, 由 GitHub Actions 为 **x64** 与 **arm64** 各构建一次,
-产物为 `install-<arch>.tar.gz` (详见下文「补丁」「CI」两节).
 
 ## 配置
 
@@ -30,10 +26,8 @@
 
 `clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.sh` 在 `test-cxx`
 为 `clang-6` 时打上 `source/patches/` 下的补丁 (对 g++ 构建库本身是 **no-op**).
-细节见 [`source/patches/README.md`](source/patches/README.md).
 
 ## CI
 
 `.github/workflows/build.yaml` 经 GitHub Actions 为 x64 / arm64 各构建一次, 跑通 DDS 与 RPC
-测试后打包 `install-<arch>.tar.gz` 发布为 release; 仅 `source/**` 有改动时触发 (也可手动).
-细节见 [`.github/workflows/README.md`](.github/workflows/README.md).
+测试后打包 `install-<arch>.tar.gz` 发布为 release.
