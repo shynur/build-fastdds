@@ -99,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive          # Fast-DDS(含 thirdparty) + foonathan_memory
+          submodules: recursive          # Fast-DDS + 其 thirdparty (foonathan_memory 改由 ci-build 期动态获取)
 
       - name: Download generated types
         uses: actions/download-artifact@v4

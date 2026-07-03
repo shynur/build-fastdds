@@ -5,6 +5,9 @@
 # 依赖构建顺序 (与既定的, 已验证可用的配方一致):
 #   foonathan_memory (静态, PIC)  ->  Fast-CDR (共享)  ->  Fast-DDS (共享)
 #
+# foonathan_memory 的源码不入库: 构建前由 scripts/fetch-foonathan.sh 按 Fast-DDS 声明
+# 的版本动态 clone 到 third_party/foonathan_memory/ (见该脚本).
+#
 # Fast-CDR 单独构建并安装, 好处是测试用例可以直接 find_package(fastcdr); Fast-DDS
 # 内部仍用 THIRDPARTY=ON 的捆绑 fastcdr (两者同源, 都来自已 patch 的 thirdparty/fastcdr).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -23,7 +26,10 @@ rm -rf "${PREFIX}" "${BUILD}"
 mkdir -p "${PREFIX}"
 
 # --- 1. foonathan_memory (静态库 + PIC) ---
-cmake -S "${REPO_ROOT}/third_party/foonathan_memory" -B "${BUILD}/foonathan" \
+FOONATHAN_SRC="${REPO_ROOT}/third_party/foonathan_memory"
+[ -f "${FOONATHAN_SRC}/CMakeLists.txt" ] \
+    || { echo "缺少 foonathan_memory 源码; 请先运行 scripts/fetch-foonathan.sh" >&2; exit 1; }
+cmake -S "${FOONATHAN_SRC}" -B "${BUILD}/foonathan" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \

@@ -4,6 +4,10 @@
 /source/install-arm64/
 *.tar.gz
 
+# foonathan_memory 源码: 不再作为 submodule, 由 scripts/fetch-foonathan.sh 于 CI 期
+# 按 Fast-DDS/fastdds.repos 声明的版本动态 clone, 不入库.
+/source/third_party/foonathan_memory/
+
 # tests/ 下 fastddsgen 生成物: 由 CI 的 generate 作业生成, 不入库 (仅保留 .idl)
 /source/tests/*/src/types/*
 !/source/tests/*/src/types/*.idl

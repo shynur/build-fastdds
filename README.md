@@ -5,6 +5,10 @@
 库与测试共享同一份 `libstdc++`, 因此可正常互链, 运行.
 
 > Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可).
+> 依赖 `foonathan_memory` 则**不再**作为 submodule: 其所需版本已由 Fast DDS 自己声明
+> (`Fast-DDS/fastdds.repos` 里的 `foonathan_memory_vendor` → 该 vendor 的 `externalproject` 的
+> `GIT_TAG`), 故 `scripts/fetch-foonathan.sh` 于 CI 期沿此链解析并动态 clone 对应源码.
+> 这样升级 Fast DDS submodule 时, `foonathan_memory` 版本自动跟随, 无需在别处同步.
 
 ## 配置
 
