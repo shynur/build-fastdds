@@ -1,13 +1,13 @@
 name: build
 
 # 仅当 source/ 下的构建相关内容有改动时才触发 (纯文档/README 改动不构建).
-# 负向模式在正向之后求值, 故 source/ 下的 *.md 被排除; 但只要同一 push 里另有
-# 非 .md 的 source/ 改动, 整体仍会触发.
+# 负向模式在正向之后求值, 故 *.md 被排除; 但只要同一 push 里另有非 .md 的
+# source/ 改动, 整体仍会触发.
 on:
   push:
     paths:
       - 'source/**'
-      - '!source/**/*.md'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:

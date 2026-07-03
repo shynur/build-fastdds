@@ -17,6 +17,6 @@
 
 ## 触发条件
 
-- `push` 事件仅在 `source/**` 有改动时才跑, 且排除其中的 `*.md` (见 workflow 的
+- `push` 事件仅在 `source/**` 有改动时才跑, 且排除 `*.md` (见 workflow 的
   `on.push.paths`); 纯文档 / README 改动不构建.
 - 也可在 Actions 页面用 `workflow_dispatch` 手动触发.
