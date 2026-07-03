@@ -19,6 +19,8 @@ jobs:
     outputs:
       fastdds_version: ${{ steps.v.outputs.fastdds_version }}
       tag: ${{ steps.v.outputs.tag }}
+      ubuntu_x64: ${{ steps.v.outputs.ubuntu_x64 }}
+      ubuntu_arm64: ${{ steps.v.outputs.ubuntu_arm64 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,8 +35,12 @@ jobs:
             VER="v$(sed -nE 's/^project\(fastdds VERSION "?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' source/Fast-DDS/CMakeLists.txt)"
           fi
           STAMP="$(TZ=Asia/Shanghai date +%Y%m%d%H%M)"   # 构建时间, UTC+8, 精确到分
-          echo "fastdds_version=$VER"      >> "$GITHUB_OUTPUT"
-          echo "tag=${VER}+${STAMP}"       >> "$GITHUB_OUTPUT"
+          # 各架构容器版本以 config.ini 为唯一来源 (供 release notes 引用).
+          ubuntu() { sed -n "s/^[[:space:]]*Ubuntu-$1[[:space:]]*=[[:space:]]*\([^#]*\).*/\1/p" source/config.ini | head -n1 | tr -d '[:space:]'; }
+          echo "fastdds_version=$VER"          >> "$GITHUB_OUTPUT"
+          echo "tag=${VER}+${STAMP}"           >> "$GITHUB_OUTPUT"
+          echo "ubuntu_x64=$(ubuntu x64)"      >> "$GITHUB_OUTPUT"
+          echo "ubuntu_arm64=$(ubuntu arm64)"  >> "$GITHUB_OUTPUT"
           echo "==> version=$VER  tag=${VER}+${STAMP}"
 
   # ---------------------------------------------------------------------------
@@ -67,7 +73,6 @@ jobs:
       - name: Build Fast DDS + run tests (inside ubuntu:${{ steps.cfg.outputs.ubuntu }})
         run: |
           docker run --rm -v "$PWD/source:/repo" -w /repo \
-            -e FASTDDS_VERSION='${{ needs.meta.outputs.fastdds_version }}' \
             "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
             bash scripts/ci-build.sh
 
@@ -111,4 +116,4 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "${{ needs.meta.outputs.tag }}" \
-            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试.  附件: install-x64.tar.gz (Ubuntu 18.04), install-arm64.tar.gz (Ubuntu 20.04)."
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试.  附件: install-x64.tar.gz (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), install-arm64.tar.gz (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }})."

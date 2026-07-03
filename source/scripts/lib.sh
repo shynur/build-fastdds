@@ -39,7 +39,7 @@ kitware_arch() {
 
 # 编译器字段 -> C++ 可执行文件名.
 #   g++-7    -> g++-7
-#   clang-6  -> clang++-6.0 (若不存在则退回 clang++-6)
+#   clang-6  -> clang++-6 (若不存在则退回 clang++-6.0)
 #   clang-12 -> clang++-12
 resolve_cxx_bin() {
     local spec="$1"

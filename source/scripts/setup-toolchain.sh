@@ -3,7 +3,7 @@
 #
 #   * cxx-<arch>      -> 编译 Fast DDS 相关库的编译器 (g++)
 #   * test-cxx-<arch> -> 编译测试用例的编译器 (clang)
-#   * CMake 固定使用 Kitware 官方 3.31.12 (Ubuntu 18.04 自带的 3.10 太旧).
+#   * CMake 固定使用 Kitware 官方 release (Ubuntu 18.04 自带的 3.10 太旧); 版本见下方 CMAKE_VERSION.
 #
 # 只安装「一个」g++ 版本, 从而保证 clang 自动选中的 libstdc++ 与该 g++ 一致
 # (clang 会选系统里版本号最高的 GCC; 只装一个就没有歧义).
@@ -24,7 +24,7 @@ apt-get install -y --no-install-recommends \
 apt_install_cxx "${CXX_SPEC}"       # g++-N (会带上匹配的 libstdc++-N-dev)
 apt_install_cxx "${TESTCXX_SPEC}"   # clang-M
 
-# --- CMake 3.31.12 (Kitware 官方自解压安装脚本) ---
+# --- CMake (Kitware 官方自解压安装脚本) ---
 CMAKE_VERSION="3.31.12"
 CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-$(kitware_arch).sh"
 echo ">> installing CMake from ${CMAKE_URL}"

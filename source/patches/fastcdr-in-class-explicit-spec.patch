@@ -8,10 +8,10 @@ index 83126de..45e343b 100644
  
 -#if defined(__GNUC__) && !defined(__clang__)
 +#if defined(__GNUC__) || defined(__clang__)
-+// On GCC, and on clang too (clang < 7 rejects in-class explicit specialization
-+// of member function templates per C++14), treat these as plain member
-+// function overloads rather than as explicit specializations of the primary
-+// serialize/deserialize/... member template.
++// On GCC, and on clang (our test compiler clang-6 rejects an in-class explicit
++// specialization of a member function template), expand to nothing so these
++// become plain member function overloads rather than explicit specializations
++// of the primary serialize/deserialize/... member template.
  #define TEMPLATE_SPEC
  #else
  #define TEMPLATE_SPEC template<>

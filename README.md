@@ -30,19 +30,14 @@
 
 `patches/fastcdr-in-class-explicit-spec.patch` 只改 Fast-CDR 公共头 `config.h.in` 一处:
 让 `TEMPLATE_SPEC` 宏在 clang 下也展开为空.  原始定义在 clang 下会展开成「类内 `template<>`
-显式特化」, 而:
+显式特化」, 而 `clang-6` 会拒绝 (`error: explicit specialization ... in class scope`), 故需补丁.
 
-| 测试编译器 | 类内显式特化 | 是否需要补丁 |
-| ---------- | ------------ | ------------ |
-| `clang-6`  | 拒绝 (`error: explicit specialization ... in class scope`) | **需要** |
-| `clang-12` | 接受         | **不需要**   |
-
-因此 `apply-patch.sh` **不写死版本**, 而是现场编一段最小代码探测: 测试编译器编不过才打补丁
-(满足「如无必要勿用补丁」).  注意: 对用 g++ 编译库本身而言, 补丁前后展开结果完全相同, 是
-**no-op** -- 即便打了补丁也绝不会改变 g++ 构建出的库.
+补丁针对 `clang-6` 写死: `apply-patch.sh` 在 `test-cxx` 为 `clang-6` 时打补丁.  注意: 对用
+g++ 编译库本身而言, 补丁前后展开结果完全相同, 是 **no-op** -- 即便打了补丁也绝不会改变 g++
+构建出的库.
 
 > 补充: 在 **arm64** 上, `clang-6` 会**错误编译** Fast DDS 生成的类型支持代码, 运行期抛
-> `std::bad_function_call` 崩溃; `clang-7` 及以上正常.  这就是 arm64 选用 `clang-12` 的原因.
+> `std::bad_function_call` 崩溃; 改用 `clang-12` 则正常.  这就是 arm64 选用 `clang-12` 的原因.
 
 ## CI 构建流程
 
