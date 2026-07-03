@@ -16,13 +16,13 @@
 两个编译器都按架构在 `source/config.ini` 里配置: `cxx-<arch>` 是编库用的 `g++`,
 `test-cxx-<arch>` 是编测试用的 clang.  下文用 `cxx` / `test-cxx` 指代这两个键选出的编译器.
 
-- **库 (foonathan_memory / Fast-CDR / Fast-DDS) 一律用 `cxx` (`g++`) 编译**; 测试用例用
+- **库 (`foonathan_memory` / `Fast-CDR` / `Fast-DDS`) 一律用 `cxx` (`g++`) 编译**; 测试用例用
   `test-cxx` (clang) 编译.  二者链接同一份 `libstdc++.so.6`, 遵循同一套 Itanium C++ ABI,
   故可混合链接, 正常运行.
 - **一致性如何保证**: 容器里「只装一个」`g++` 版本 (即 `cxx` 选中的那个).  clang 默认会选
   系统里版本号最高的 GCC 工具链; 既然只有一个, 就没有歧义, clang 自然选中它的 `libstdc++`.
   `run-tests.sh` 还会**机器校验**两点:
-  1. clang 编译期 `Selected GCC installation` 的版本号 == `g++` 的版本号;
+  1. clang 编译期 `Selected GCC installation` 的版本号 = `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
 
 ## 补丁
