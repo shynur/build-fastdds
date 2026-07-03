@@ -7,9 +7,8 @@
 > Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可),
 > 文档与 CI 都不写死版本号, 而是运行时从 submodule 动态获取.
 
-所有构建相关内容都放在 `source/` 下; **只有 `source/` 有改动时才会触发 CI** (纯文档改动不构建).
-每次触发都会经 GitHub Actions 为 **x64** 与 **arm64** 各构建一次, 跑通 DDS 与 RPC 测试后,
-把安装目录打包成 `install-<arch>.tar.gz` 发布为 release.
+所有构建相关内容都放在 `source/` 下, 由 GitHub Actions 为 **x64** 与 **arm64** 各构建一次,
+产物为 `install-<arch>.tar.gz` (详见下文「补丁」「CI」两节).
 
 ## 配置
 
@@ -29,31 +28,12 @@
 
 ## 补丁
 
-`patches/fastcdr-in-class-explicit-spec.patch` 只改 Fast-CDR 公共头 `config.h.in` 一处:
-让 `TEMPLATE_SPEC` 宏在 clang 下也展开为空.  原始定义在 clang 下会展开成「类内 `template<>`
-显式特化」, 而 `clang-6` 会拒绝 (`error: explicit specialization ... in class scope`), 故需补丁.
+`clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.sh` 在 `test-cxx`
+为 `clang-6` 时打上 `source/patches/` 下的补丁 (对 g++ 构建库本身是 **no-op**).
+细节见 [`source/patches/README.md`](source/patches/README.md).
 
-补丁针对 `clang-6` 写死: `apply-patch.sh` 在 `test-cxx` 为 `clang-6` 时打补丁.  注意: 对用
-g++ 编译库本身而言, 补丁前后展开结果完全相同, 是 **no-op** -- 即便打了补丁也绝不会改变 g++
-构建出的库.
+## CI
 
-> 补充:
-> 在 **arm64** 上, `clang-6` 会**错误编译** Fast DDS 生成的类型支持代码, 运行期抛
-> `std::bad_function_call` 崩溃.
-
-## CI 构建流程
-
-`.github/workflows/build.yaml`:
-
-1. **meta**: `checkout` (含子模块), `git describe` 从 submodule 动态取出 Fast DDS 版本号,
-   生成 release tag `<版本号>+<北京时间 yyyymmddHHMM>`.
-2. **build** (x64 / arm64 各一, 分别跑在 `ubuntu-latest` 与 `ubuntu-24.04-arm` runner 上):
-   1. `checkout` (含子模块).
-   2. 依 `source/config.ini` 的 `Ubuntu-<arch>` 起 `ubuntu:<VER>` 容器, 挂载 `source/`, 运行
-      `scripts/ci-build.sh`: 装工具链 → 按需打补丁 → 用 g++ 编译三件套到 `install-<arch>/`
-      → 校验 libstdc++ 一致性 → 用 clang 编译并运行 DDS / RPC 测试.
-   3. 打包 `install-<arch>.tar.gz` 并上传为 artifact.
-3. **release** (仅 `push`): 下载两份 artifact, 以上面的 tag 建 release, 附件为两个 `.tar.gz`.
-
-> 触发条件: `push` 事件仅在 `source/**` 有改动时才跑 (见 workflow 的 `on.push.paths`);
-> 也可在 Actions 页面用 `workflow_dispatch` 手动触发.
+`.github/workflows/build.yaml` 经 GitHub Actions 为 x64 / arm64 各构建一次, 跑通 DDS 与 RPC
+测试后打包 `install-<arch>.tar.gz` 发布为 release; 仅 `source/**` 有改动时触发 (也可手动).
+细节见 [`.github/workflows/README.md`](.github/workflows/README.md).
