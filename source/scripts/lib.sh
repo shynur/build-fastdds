@@ -1,9 +1,9 @@
 # scripts/lib.sh - 被其它脚本 source 的公共函数库 (纯 POSIX-ish bash)
 #
 # 约定:
-#   * config.ini 是「扁平」的 key=value (无 section), 用 cfg() 读取.
-#   * 架构后缀 x64 / arm64 由 detect_arch() 根据 uname -m 推断.
-#   * 编译器字段 (g++-7 / clang-6 / clang-12) 通过 resolve_* 映射成
+#   - config.ini 是「扁平」的 key=value (无 section), 用 cfg() 读取.
+#   - 架构后缀 x64 / arm64 由 detect_arch() 根据 uname -m 推断.
+#   - 编译器字段 (g++-7 / clang-6 / clang-12) 通过 resolve_* 映射成
 #     实际的可执行文件名与 apt 包名 (Ubuntu 上 clang 6 的包/程序名带 .0 后缀).
 
 set -euo pipefail

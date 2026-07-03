@@ -2,9 +2,9 @@
 # scripts/apply-patch.sh - 「按需」把 patch 应用到 Fast DDS 源码树.
 #
 # 该 patch 只改 thirdparty/fastcdr 的公共头 config.h.in 里 TEMPLATE_SPEC 宏的定义:
-#   * 原始定义在 clang 下展开为「类内 template<> 显式特化」, clang-6 会拒绝
+#   - 原始定义在 clang 下展开为「类内 template<> 显式特化」, clang-6 会拒绝
 #     (error: explicit specialization ... in class scope);
-#   * patch 后在 clang 下也展开为空 (与 g++ 一致), 即普通成员函数.
+#   - patch 后在 clang 下也展开为空 (与 g++ 一致), 即普通成员函数.
 #
 # test-cxx 是 clang-6 时打这个 patch.
 #

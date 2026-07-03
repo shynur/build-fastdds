@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # scripts/setup-toolchain.sh - 在构建容器里安装工具链 (由 config.ini 决定编译器).
 #
-#   * cxx-<arch>      -> 编译 Fast DDS 相关库的编译器 (g++)
-#   * test-cxx-<arch> -> 编译测试用例的编译器 (clang)
-#   * CMake 固定使用 Kitware 官方 release (Ubuntu 18.04 自带的 3.10 太旧); 版本见下方 CMAKE_VERSION.
+#   - cxx-<arch>      -> 编译 Fast DDS 相关库的编译器 (g++)
+#   - test-cxx-<arch> -> 编译测试用例的编译器 (clang)
+#   - CMake 固定使用 Kitware 官方 release (Ubuntu 18.04 自带的 3.10 太旧); 版本见下方 CMAKE_VERSION.
 #
 # 只安装「一个」g++ 版本, 从而保证 clang 自动选中的 libstdc++ 与该 g++ 一致
 # (clang 会选系统里版本号最高的 GCC; 只装一个就没有歧义).

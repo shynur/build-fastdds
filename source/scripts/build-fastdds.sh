@@ -22,7 +22,7 @@ echo ">> CXX=${CXX}  CC=${CC}  type=${BUILD_TYPE}  prefix=${PREFIX}  jobs=${JOBS
 rm -rf "${PREFIX}" "${BUILD}"
 mkdir -p "${PREFIX}"
 
-# --- 1) foonathan_memory (静态库 + PIC) ---
+# --- 1. foonathan_memory (静态库 + PIC) ---
 cmake -S "${REPO_ROOT}/third_party/foonathan_memory" -B "${BUILD}/foonathan" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
@@ -35,7 +35,7 @@ cmake -S "${REPO_ROOT}/third_party/foonathan_memory" -B "${BUILD}/foonathan" \
     -DFOONATHAN_MEMORY_BUILD_TESTS=OFF
 cmake --build "${BUILD}/foonathan" -j"${JOBS}" --target install
 
-# --- 2) Fast-CDR (共享库) ---
+# --- 2. Fast-CDR (共享库) ---
 cmake -S "${REPO_ROOT}/Fast-DDS/thirdparty/fastcdr" -B "${BUILD}/fastcdr" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
@@ -44,7 +44,7 @@ cmake -S "${REPO_ROOT}/Fast-DDS/thirdparty/fastcdr" -B "${BUILD}/fastcdr" \
     -DBUILD_SHARED_LIBS=ON
 cmake --build "${BUILD}/fastcdr" -j"${JOBS}" --target install
 
-# --- 3) Fast-DDS (+ 捆绑的 asio / tinyxml2 / fastcdr) ---
+# --- 3. Fast-DDS (+ 捆绑的 asio / tinyxml2 / fastcdr) ---
 cmake -S "${REPO_ROOT}/Fast-DDS" -B "${BUILD}/fastdds" \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
