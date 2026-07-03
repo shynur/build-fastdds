@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/build-fastddsgen.sh - 从源码构建 eProsima Fast-DDS-Gen (fastddsgen).
+# scripts/build-fastddsgen.bash - 从源码构建 eProsima Fast-DDS-Gen (fastddsgen).
 #
 # 版本「不写死」: 取自 Fast-DDS submodule 自带的 vcstool 清单 Fast-DDS/fastdds.repos
 # 里 fastddsgen 的 version 字段 (与 fastdds / fastcdr 并列固定).  因此升级 Fast-DDS
@@ -11,10 +11,10 @@
 # 输出契约:
 #   - 所有日志走 stderr;
 #   - stdout 「只」打印一行: 生成器 scripts/ 目录的绝对路径 (内含可执行的 fastddsgen 包装脚本).
-#   用法: export PATH="$(bash scripts/build-fastddsgen.sh):$PATH"
+#   用法: export PATH="$(bash scripts/build-fastddsgen.bash):$PATH"
 #
 # 缓存: 默认构建到 /tmp/fastddsgen-<版本>, 可用 FASTDDSGEN_DIR 覆盖; 若目录内已有产物则跳过重建.
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib.bash"
 
 REPOS="${REPO_ROOT}/Fast-DDS/fastdds.repos"
 [ -f "${REPOS}" ] || { echo "找不到 ${REPOS} (Fast-DDS submodule 未 checkout?)" >&2; exit 1; }

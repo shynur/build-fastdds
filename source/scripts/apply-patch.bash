@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/apply-patch.sh - 「按需」把 patch 应用到 Fast DDS 源码树.
+# scripts/apply-patch.bash - 「按需」把 patch 应用到 Fast DDS 源码树.
 #
 # 该 patch 只改 thirdparty/fastcdr 的公共头 config.h.in 里 TEMPLATE_SPEC 宏的定义:
 #   - 原始定义在 clang 下展开为「类内 template<> 显式特化」, clang-6 会拒绝
@@ -10,7 +10,7 @@
 #
 # 注意: 对用 g++ 编译库本身而言, patch 前后展开结果完全相同, 是 no-op; 因此即便
 # 打了 patch 也绝不会改变 g++ 构建出的库.
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib.bash"
 
 ARCH="$(detect_arch)"
 TESTCXX_SPEC="$(cfg "test-cxx-${ARCH}")"

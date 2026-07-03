@@ -1,4 +1,4 @@
-# scripts/lib.sh - 被其它脚本 source 的公共函数库 (纯 POSIX-ish bash)
+# scripts/lib.bash - 被其它脚本 source 的公共函数库 (纯 POSIX-ish bash)
 #
 # 约定:
 #   - config.ini 是「扁平」的 key=value (无 section), 用 cfg() 读取.
@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-# 仓库根目录 (本文件位于 <root>/scripts/lib.sh)
+# 仓库根目录 (本文件位于 <root>/scripts/lib.bash)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 读取 config.ini 中某个 key 的值 (去除首尾空白与行内注释).

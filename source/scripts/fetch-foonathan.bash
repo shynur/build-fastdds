@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/fetch-foonathan.sh - 动态获取「所需版本」的 foonathan_memory 源码到
+# scripts/fetch-foonathan.bash - 动态获取「所需版本」的 foonathan_memory 源码到
 # third_party/foonathan_memory/ (取代原先的 git submodule).
 #
 # 版本「不写死」, 完全由 Fast-DDS submodule 的声明决定, 逐级解析:
@@ -7,11 +7,11 @@
 #     -> 浅克隆该 vendor (eProsima 对 foonathan/memory 的封装仓库), 读其 CMakeLists.txt
 #       -> externalproject_add(foo_mem-ext ...) 里的 GIT_REPOSITORY + GIT_TAG
 #          就是 foonathan/memory 真正的仓库 URL 与 tag
-#   -> git clone 该 tag 的源码, 交给 build-fastdds.sh 编译.
+#   -> git clone 该 tag 的源码, 交给 build-fastdds.bash 编译.
 # 因此升级 Fast-DDS submodule 时, foonathan_memory 版本自动跟随, 无需在别处同步.
 #
-# 需要 git 与网络; 在 setup-toolchain.sh 之后运行 (那步已装好 git/ca-certificates).
-source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# 需要 git 与网络; 在 setup-toolchain.bash 之后运行 (那步已装好 git/ca-certificates).
+source "$(dirname "${BASH_SOURCE[0]}")/lib.bash"
 
 REPOS="${REPO_ROOT}/Fast-DDS/fastdds.repos"
 [ -f "${REPOS}" ] || { echo "找不到 ${REPOS} (Fast-DDS submodule 未 checkout?)" >&2; exit 1; }

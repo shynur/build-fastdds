@@ -1,6 +1,6 @@
 # 补丁
 
-供 `scripts/apply-patch.sh` 在编译前按需施加, 只服务于「用 clang 编译测试用例」这一场景.
+供 `scripts/apply-patch.bash` 在编译前按需施加, 只服务于「用 clang 编译测试用例」这一场景.
 
 ## `fastcdr-in-class-explicit-spec.patch`
 
@@ -13,7 +13,7 @@
 
 ## 何时施加
 
-补丁针对 `clang-6` 写死: `apply-patch.sh` 仅在 `test-cxx` 为 `clang-6` 时打补丁, 由
+补丁针对 `clang-6` 写死: `apply-patch.bash` 仅在 `test-cxx` 为 `clang-6` 时打补丁, 由
 `source/config.ini` 的配置判断, 不做现场探测.
 
 > 补充:

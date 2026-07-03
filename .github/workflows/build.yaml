@@ -66,8 +66,8 @@ jobs:
       - name: Build fastddsgen (版本取自 fastdds.repos) 并生成类型代码
         run: |
           set -euo pipefail
-          export PATH="$(bash source/scripts/build-fastddsgen.sh):$PATH"
-          bash source/scripts/gen-types.sh
+          export PATH="$(bash source/scripts/build-fastddsgen.bash):$PATH"
+          bash source/scripts/gen-types.bash
           # 打成 tar (保留 source/... 完整路径), 避免 upload-artifact 的公共祖先路径重写;
           # 下游解包即精确还原到原位. 只带生成物, 不带 .idl (build 已从 checkout 得到).
           tar czf generated-types.tar.gz --exclude='*.idl' \
@@ -124,7 +124,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD/source:/repo" -w /repo \
             "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
-            bash scripts/ci-build.sh
+            bash scripts/ci-build.bash
 
       - name: Package install-${{ matrix.arch }}.tar.gz
         run: |

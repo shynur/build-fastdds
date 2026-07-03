@@ -7,7 +7,7 @@
 > Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可).
 > 依赖 `foonathan_memory` 则**不再**作为 submodule: 其所需版本已由 Fast DDS 自己声明
 > (`Fast-DDS/fastdds.repos` 里的 `foonathan_memory_vendor` → 该 vendor 的 `externalproject` 的
-> `GIT_TAG`), 故 `scripts/fetch-foonathan.sh` 于 CI 期沿此链解析并动态 clone 对应源码.
+> `GIT_TAG`), 故 `scripts/fetch-foonathan.bash` 于 CI 期沿此链解析并动态 clone 对应源码.
 > 这样升级 Fast DDS submodule 时, `foonathan_memory` 版本自动跟随, 无需在别处同步.
 
 ## 配置
@@ -25,7 +25,7 @@
   故可混合链接, 正常运行.
 - **一致性如何保证**: 容器里「只装一个」`g++` 版本 (即 `cxx` 选中的那个).  clang 默认会选
   系统里版本号最高的 GCC 工具链; 既然只有一个, 就没有歧义, clang 自然选中它的 `libstdc++`.
-  `run-tests.sh` 还会**机器校验**两点:
+  `run-tests.bash` 还会**机器校验**两点:
   1. clang 编译期 `Selected GCC installation` 的版本号 = `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
 
@@ -36,7 +36,7 @@
 
 ## 补丁
 
-`clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.sh` 在 `test-cxx`
+`clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.bash` 在 `test-cxx`
 为 `clang-6` 时打上 `source/patches/` 下的补丁 (对 `g++` 构建库本身是 **no-op**).
 
 ## CI
