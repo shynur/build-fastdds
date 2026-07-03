@@ -1,0 +1,21 @@
+diff --git a/thirdparty/fastcdr/include/fastcdr/config.h.in b/thirdparty/fastcdr/include/fastcdr/config.h.in
+index 83126de..45e343b 100644
+--- a/thirdparty/fastcdr/include/fastcdr/config.h.in
++++ b/thirdparty/fastcdr/include/fastcdr/config.h.in
+@@ -42,10 +42,14 @@
+ #define FASTCDR_ARM32
+ #endif // if defined(__ARM_ARCH) && __ARM_ARCH <= 7
+ 
+-#if defined(__GNUC__) && !defined(__clang__)
++#if defined(__GNUC__) || defined(__clang__)
++// On GCC, and on clang too (clang < 7 rejects in-class explicit specialization
++// of member function templates per C++14), treat these as plain member
++// function overloads rather than as explicit specializations of the primary
++// serialize/deserialize/... member template.
+ #define TEMPLATE_SPEC
+ #else
+ #define TEMPLATE_SPEC template<>
+-#endif // if defined(__GNUC__) && !defined(__clang__)
++#endif // if defined(__GNUC__) || defined(__clang__)
+ 
+ #endif // _FASTCDR_CONFIG_H_

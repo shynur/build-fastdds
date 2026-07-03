@@ -1,0 +1,112 @@
+name: build
+
+# 每次推送都构建 x64 与 arm64 两套, 跑通 DDS/RPC 测试后发布 release。
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write        # release 作业需要创建 tag/release
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 0) 取 Fast DDS 版本号 + 生成 release tag (v<版本>+<北京时间 yyyymmddHHMM>)
+  # ---------------------------------------------------------------------------
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      fastdds_version: ${{ steps.v.outputs.fastdds_version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0        # 拿到 tag, 便于 git describe
+      - id: v
+        run: |
+          set -euo pipefail
+          # 动态获取 Fast DDS 版本: 优先 git tag, 退回解析其 CMakeLists 的 project() 版本。
+          VER="$(git -C Fast-DDS describe --tags --exact-match 2>/dev/null || true)"
+          if [ -z "$VER" ]; then
+            VER="v$(sed -nE 's/^project\(fastdds VERSION "?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' Fast-DDS/CMakeLists.txt)"
+          fi
+          STAMP="$(TZ=Asia/Shanghai date +%Y%m%d%H%M)"   # 构建时间, UTC+8, 精确到分
+          echo "fastdds_version=$VER"      >> "$GITHUB_OUTPUT"
+          echo "tag=${VER}+${STAMP}"       >> "$GITHUB_OUTPUT"
+          echo "==> version=$VER  tag=${VER}+${STAMP}"
+
+  # ---------------------------------------------------------------------------
+  # 1) 构建 + 测试 (x64 / arm64 各一)
+  # ---------------------------------------------------------------------------
+  build:
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest        # x86_64 宿主机
+          - arch: arm64
+            runner: ubuntu-24.04-arm     # 原生 arm64 宿主机 (public repo 免费)
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive          # Fast-DDS(含 thirdparty) + foonathan_memory
+
+      - name: Resolve Ubuntu image from config.ini
+        id: cfg
+        run: |
+          set -euo pipefail
+          UBUNTU="$(sed -n "s/^[[:space:]]*Ubuntu-${{ matrix.arch }}[[:space:]]*=[[:space:]]*\([^#]*\).*/\1/p" config.ini | head -n1 | tr -d '[:space:]')"
+          echo "ubuntu=$UBUNTU" >> "$GITHUB_OUTPUT"
+          echo "==> Ubuntu-${{ matrix.arch }} = $UBUNTU"
+
+      - name: Build Fast DDS + run tests (inside ubuntu:${{ steps.cfg.outputs.ubuntu }})
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            -e FASTDDS_VERSION='${{ needs.meta.outputs.fastdds_version }}' \
+            "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
+            bash scripts/ci-build.sh
+
+      - name: Package install-${{ matrix.arch }}.tar.gz
+        run: |
+          set -euo pipefail
+          sudo chown -R "$(id -u):$(id -g)" "install-${{ matrix.arch }}"   # 容器内产物归 root
+          tar czf "install-${{ matrix.arch }}.tar.gz" "install-${{ matrix.arch }}"
+          ls -lh "install-${{ matrix.arch }}.tar.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-${{ matrix.arch }}
+          path: install-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 2) 发布 release (仅 push 触发), 附件为两份 install-*.tar.gz
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [meta, build]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release ${{ needs.meta.outputs.tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ needs.meta.outputs.tag }}" \
+            artifacts/install-x64/install-x64.tar.gz \
+            artifacts/install-arm64/install-arm64.tar.gz \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "${{ needs.meta.outputs.tag }}" \
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} — 用 g++ 编译库、clang 编译并测试。附件: install-x64.tar.gz (Ubuntu 18.04), install-arm64.tar.gz (Ubuntu 20.04)。"
