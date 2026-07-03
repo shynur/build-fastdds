@@ -53,7 +53,7 @@ public:
         std::cout << "[Client] initialized, service='" << this->service_name_ << "'" << std::endl;
     }
 
-    // 演示 out 参数: 取回 32 位整数的表示范围。
+    // 演示 out 参数: 取回 32 位整数的表示范围.
     void call_representation_limits() {
         auto future = this->client_->representation_limits();
         if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
@@ -69,7 +69,7 @@ public:
         }
     }
 
-    // 演示 in 参数 + 返回值 (可能抛出 OverflowException)。
+    // 演示 in 参数 + 返回值 (可能抛出 OverflowException).
     void call_addition(std::int32_t x, std::int32_t y) {
         auto future = this->client_->addition(x, y);
         if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
@@ -111,10 +111,10 @@ int main() {
     auto client = Client{"CalculatorService"};
     client.init();
 
-    // 等待与服务端完成端点匹配。
+    // 等待与服务端完成端点匹配.
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    // 依次演示: out 参数 / 正常运算 / 触发溢出异常。
+    // 依次演示: out 参数 / 正常运算 / 触发溢出异常.
     client.call_representation_limits();
     client.call_addition(5, 3);
     client.call_subtraction(5, 3);

@@ -53,7 +53,7 @@ public:
         std::cout << "[Server] initialized, service='" << this->service_name_ << "'" << std::endl;
     }
 
-    // 阻塞运行, 直到 stop() 被调用。
+    // 阻塞运行, 直到 stop() 被调用.
     void run() {
         std::cout << "[Server] running" << std::endl;
         this->server_->run();
@@ -72,8 +72,8 @@ private:
     std::string service_name_;
 };
 
-// 信号处理只做一件事: 置位停止标志 (async-signal-safe)。真正的 stop()/join()
-// 由主线程执行, 避免在信号上下文里调用非异步信号安全的清理逻辑。
+// 信号处理只做一件事: 置位停止标志 (async-signal-safe). 真正的 stop()/join()
+// 由主线程执行, 避免在信号上下文里调用非异步信号安全的清理逻辑.
 std::atomic<bool> g_stop_requested{false};
 
 void signal_handler(int signum) {
@@ -85,7 +85,7 @@ int main() {
     const auto server = std::make_shared<Server>("CalculatorService");
     server->init();
 
-    // run() 阻塞, 放到独立线程中执行, 主线程负责等待停止信号。
+    // run() 阻塞, 放到独立线程中执行, 主线程负责等待停止信号.
     auto thread = std::thread{[server]() { server->run(); }};
 
     std::signal(SIGINT, signal_handler);
