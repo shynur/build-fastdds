@@ -3,3 +3,7 @@
 /source/install-x64/
 /source/install-arm64/
 *.tar.gz
+
+# tests/ 下 fastddsgen 生成物: 由 CI 的 generate 作业生成, 不入库 (仅保留 .idl)
+/source/tests/*/src/types/*
+!/source/tests/*/src/types/*.idl

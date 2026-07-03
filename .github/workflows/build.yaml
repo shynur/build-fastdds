@@ -47,10 +47,46 @@ jobs:
           echo "==> version=$VER  tag=${VER}+${STAMP}"
 
   # ---------------------------------------------------------------------------
-  # 1) 构建 + 测试 (x64 / arm64 各一)
+  # 1) 生成 fastddsgen 类型/RPC 代码 (架构无关, 只跑一次, 产物喂给下面的 build)
+  #    刻意与构建分离: fastddsgen 是 Java 工具, 需要 JDK; 而 build 容器只装 g++/clang.
+  # ---------------------------------------------------------------------------
+  generate:
+    needs: meta
+    runs-on: ubuntu-latest          # 自带 gcc(cpp) 与 git, 只需补 JDK
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true          # 只需 Fast-DDS/fastdds.repos 定生成器版本 (非 recursive, 轻量)
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Build fastddsgen (版本取自 fastdds.repos) 并生成类型代码
+        run: |
+          set -euo pipefail
+          export PATH="$(bash source/scripts/build-fastddsgen.sh):$PATH"
+          bash source/scripts/gen-types.sh
+          # 打成 tar (保留 source/... 完整路径), 避免 upload-artifact 的公共祖先路径重写;
+          # 下游解包即精确还原到原位. 只带生成物, 不带 .idl (build 已从 checkout 得到).
+          tar czf generated-types.tar.gz --exclude='*.idl' \
+            source/tests/dds/src/types \
+            source/tests/rpc/src/types
+          ls -lh generated-types.tar.gz
+
+      - name: Upload generated types
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-types
+          path: generated-types.tar.gz
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 2) 构建 + 测试 (x64 / arm64 各一)
   # ---------------------------------------------------------------------------
   build:
-    needs: meta
+    needs: [meta, generate]
     strategy:
       fail-fast: false
       matrix:
@@ -64,6 +100,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive          # Fast-DDS(含 thirdparty) + foonathan_memory
+
+      - name: Download generated types
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-types
+
+      - name: Extract generated types into source/
+        run: |
+          set -euo pipefail
+          tar xzf generated-types.tar.gz    # 还原 source/tests/*/src/types/ 下的生成物
+          find source/tests -name '*.cxx' -o -name '*.hpp' | sort
 
       - name: Resolve Ubuntu image from config.ini
         id: cfg
@@ -94,7 +141,7 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # 2) 发布 release (仅 push 触发), 附件为两份 install-*.tar.gz
+  # 3) 发布 release (仅 push 触发), 附件为两份 install-*.tar.gz
   # ---------------------------------------------------------------------------
   release:
     needs: [meta, build]

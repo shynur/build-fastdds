@@ -1,5 +1,5 @@
 // HelloWorldPublisher.cpp - 1 个 DDS publisher
-#include "HelloWorldPubSubTypes.hpp"
+#include "types/HelloWorldPubSubTypes.hpp"
 
 #include <atomic>
 #include <chrono>

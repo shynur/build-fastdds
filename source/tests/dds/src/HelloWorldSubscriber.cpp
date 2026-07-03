@@ -1,5 +1,5 @@
 // HelloWorldSubscriber.cpp - DDS subscriber (可运行多个实例)
-#include "HelloWorldPubSubTypes.hpp"
+#include "types/HelloWorldPubSubTypes.hpp"
 
 #include <atomic>
 #include <chrono>

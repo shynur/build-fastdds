@@ -25,6 +25,25 @@
   1. clang 编译期 `Selected GCC installation` 的版本号 = `g++` 的版本号;
   2. 生成的可执行文件运行期 `ldd` 到 `libstdc++.so.6` (而非 `libc++`).
 
+## 测试类型代码 (fastddsgen 生成, 不入库)
+
+`source/tests/` 下只提交 **IDL 与手写源** (publisher / subscriber / client / server 及各自的
+`CMakeLists.txt`); 由 IDL 经 `fastddsgen` 生成的类型/RPC 代码 (`src/types/` 下的
+`*.hpp` / `*.cxx` / `*.ipp`) **不入库**, 在 CI 期间现生成 (见 `.gitignore`).
+
+- **生成器版本**不写死, 取自 Fast-DDS submodule 自带的 `source/Fast-DDS/fastdds.repos`
+  (与 `fastdds` / `fastcdr` 并列固定); 升级 Fast-DDS submodule 时自动跟随.
+- **两段式**: `fastddsgen` 是 Java 工具, 故与只装 `g++`/clang 的构建容器分离 ——
+  CI 的 `generate` 作业 (JDK 环境) 构建生成器并生成代码, 打包为 artifact 喂给各架构的 `build` 作业.
+- 两个测试统一采用 `<test>/src/{手写源}` + `<test>/src/types/{idl + 生成物}` 的布局.
+
+本地要完整构建/测试时, 先在有 **JDK 11 + git** 的环境里生成一次:
+
+```sh
+export PATH="$(bash source/scripts/build-fastddsgen.sh):$PATH"   # 构建 fastddsgen (版本取自 fastdds.repos)
+bash source/scripts/gen-types.sh                                  # 就地生成到 tests/*/src/types/
+```
+
 ## 补丁
 
 `clang-6` 会拒绝 Fast-CDR 公共头里一处「类内显式特化」, 故 `apply-patch.sh` 在 `test-cxx`
@@ -32,5 +51,6 @@
 
 ## CI
 
-`.github/workflows/build.yaml` 经 GitHub Actions 为 x64 / arm64 各构建一次, 跑通 DDS 与 RPC
+`.github/workflows/build.yaml` 经 GitHub Actions: 先由 `generate` 作业用 `fastddsgen` 生成测试
+类型代码 (架构无关, 只一次), 再为 x64 / arm64 各构建一次 (消费该产物), 跑通 DDS 与 RPC
 测试后打包 `install-<arch>.tar.gz` 发布为 release.

@@ -11,16 +11,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(fastcdr REQUIRED)
 find_package(fastdds REQUIRED)
 
-# 生成的类型支持代码
+# fastddsgen 生成的类型支持代码 (在 src/types/ 下, CI 期间生成, 不入库)
 set(GENERATED_SOURCES
-    HelloWorldPubSubTypes.cxx
-    HelloWorldTypeObjectSupport.cxx
+    src/types/HelloWorldPubSubTypes.cxx
+    src/types/HelloWorldTypeObjectSupport.cxx
 )
 
-add_executable(publisher HelloWorldPublisher.cpp ${GENERATED_SOURCES})
-target_include_directories(publisher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(publisher src/HelloWorldPublisher.cpp ${GENERATED_SOURCES})
+target_include_directories(publisher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(publisher fastdds fastcdr)
 
-add_executable(subscriber HelloWorldSubscriber.cpp ${GENERATED_SOURCES})
-target_include_directories(subscriber PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(subscriber src/HelloWorldSubscriber.cpp ${GENERATED_SOURCES})
+target_include_directories(subscriber PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(subscriber fastdds fastcdr)
