@@ -1,6 +1,6 @@
 name: build
 
-# 仅当 source/ 下的构建相关内容有改动时才触发 (纯文档/README 改动不构建)。
+# 仅当 source/ 下的构建相关内容有改动时才触发 (纯文档/README 改动不构建).
 on:
   push:
     paths:
@@ -27,7 +27,7 @@ jobs:
       - id: v
         run: |
           set -euo pipefail
-          # 动态获取 Fast DDS 版本: 优先 git tag, 退回解析其 CMakeLists 的 project() 版本。
+          # 动态获取 Fast DDS 版本: 优先 git tag, 退回解析其 CMakeLists 的 project() 版本.
           VER="$(git -C source/Fast-DDS describe --tags --exact-match 2>/dev/null || true)"
           if [ -z "$VER" ]; then
             VER="v$(sed -nE 's/^project\(fastdds VERSION "?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' source/Fast-DDS/CMakeLists.txt)"
@@ -111,4 +111,4 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "${{ needs.meta.outputs.tag }}" \
-            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} — 用 g++ 编译库、clang 编译并测试。附件: install-x64.tar.gz (Ubuntu 18.04), install-arm64.tar.gz (Ubuntu 20.04)。"
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试. 附件: install-x64.tar.gz (Ubuntu 18.04), install-arm64.tar.gz (Ubuntu 20.04)."

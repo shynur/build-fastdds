@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # scripts/build-fastdds.sh - 用 config.ini 指定的 cxx (g++) 编译整套 Fast DDS 依赖,
-# 全部安装到 install-{arch}/。
+# 全部安装到 install-{arch}/.
 #
-# 依赖构建顺序 (与既定的、已验证可用的配方一致):
+# 依赖构建顺序 (与既定的, 已验证可用的配方一致):
 #   foonathan_memory (静态, PIC)  ->  Fast-CDR (共享)  ->  Fast-DDS (共享)
 #
 # Fast-CDR 单独构建并安装, 好处是测试用例可以直接 find_package(fastcdr); Fast-DDS
-# 内部仍用 THIRDPARTY=ON 的捆绑 fastcdr (两者同源, 都来自已 patch 的 thirdparty/fastcdr)。
+# 内部仍用 THIRDPARTY=ON 的捆绑 fastcdr (两者同源, 都来自已 patch 的 thirdparty/fastcdr).
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ARCH="$(detect_arch)"

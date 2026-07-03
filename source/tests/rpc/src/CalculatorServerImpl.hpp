@@ -11,7 +11,7 @@
 #include "types/calculatorServer.hpp"
 #include "types/calculatorServerImpl.hpp"
 
-// 继承生成的默认实现 (其默认对每个操作抛 RemoteUnsupportedError), 覆盖我们支持的操作。
+// 继承生成的默认实现 (其默认对每个操作抛 RemoteUnsupportedError), 覆盖我们支持的操作.
 struct CalculatorServerImpl : public ::calculator_example::CalculatorServerImplementation {
 
     ::calculator_example::detail::Calculator_representation_limits_Out representation_limits(const ::eprosima::fastdds::dds::rpc::RpcRequest &info) override {
