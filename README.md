@@ -1,7 +1,7 @@
 # build-fastdds
 
 用 `g++` 编译 [Fast DDS](https://github.com/eProsima/Fast-DDS) 及其依赖
-(foonathan_memory / Fast-CDR), 再用 **clang** 编译并运行测试用例.
+(`foonathan_memory` / `Fast-CDR`), 再用 **clang** 编译并运行测试用例.
 库与测试共享同一份 `libstdc++`, 因此可正常互链, 运行.
 
 > Fast DDS 的具体版本由 `source/Fast-DDS/` 这个 git submodule 固定 (升级时改 submodule 即可).
