@@ -8,9 +8,8 @@
 #       -> externalproject_add(foo_mem-ext ...) 里的 GIT_REPOSITORY + GIT_TAG
 #          就是 foonathan/memory 真正的仓库 URL 与 tag
 #   -> git clone 该 tag 的源码, 交给 build-fastdds.bash 编译.
-# 因此升级 Fast-DDS submodule 时, foonathan_memory 版本自动跟随, 无需在别处同步.
 #
-# 需要 git 与网络; 在 setup-toolchain.bash 之后运行 (那步已装好 git/ca-certificates).
+# 需要 git 与网络; 在 setup-toolchain.bash 之后运行.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.bash"
 
 REPOS="${REPO_ROOT}/Fast-DDS/fastdds.repos"
@@ -20,7 +19,6 @@ DEST="${REPO_ROOT}/third_party/foonathan_memory"
 
 # --- 1. 从 fastdds.repos 解析 vendor 的 url + version ---
 # 定位 foonathan_memory_vendor: 块, 取其后的第一个 url: / version: 字段.
-# (awk 由 setup-toolchain 装的 gawk 提供, 故可放心用 [[:space:]] 这类 POSIX 字符类.)
 vendor_field() {   # $1 = 字段名 (url / version)
     awk -v k="$1:" '
         /^[[:space:]]*foonathan_memory_vendor:/ { f = 1 }

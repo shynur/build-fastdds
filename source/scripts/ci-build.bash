@@ -6,7 +6,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 bash "${here}/setup-toolchain.bash"
-bash "${here}/fetch-foonathan.bash"     # 动态获取 foonathan_memory 源码 (需 setup 已装好 git)
+bash "${here}/fetch-foonathan.bash"
 bash "${here}/apply-patch.bash"
 bash "${here}/build-fastdds.bash"
 bash "${here}/run-tests.bash"
