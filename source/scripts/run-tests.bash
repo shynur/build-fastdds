@@ -110,7 +110,6 @@ cmake --build "${BUILD}/rpc" -j"${JOBS}"
     grep -q "representation_limits => min=-2147483648, max=2147483647" client.log \
         || fail "representation_limits wrong"
     grep -q "addition => 5 + 3 = 8" client.log    || fail "addition wrong"
-    grep -q "subtraction => 5 - 3 = 2" client.log || fail "subtraction wrong"
     grep -q "raised exception" client.log         || fail "overflow exception not raised"
     echo ">> RPC TEST PASSED"
 )

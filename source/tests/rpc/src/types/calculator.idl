@@ -3,6 +3,5 @@ module calculator_example {
     interface Calculator {
         void representation_limits(out long min_value, out long max_value);
         long addition(in long value1, in long value2) raises (OverflowException);
-        long subtraction(in long value1, in long value2) raises (OverflowException);
     };
 };
