@@ -89,7 +89,7 @@ class HelloWorldPublisher {
         std::atomic<int> matched_{0};
 
         void on_publication_matched(::eprosima::fastdds::dds::DataWriter* writer, const ::eprosima::fastdds::dds::PublicationMatchedStatus& info) override {
-            static_cast<void>(writer);
+            (void)writer;
             if (info.current_count_change == 1) {
                 this->matched_ = info.current_count;
                 std::cout << "[Publisher] a subscriber matched (total=" << this->matched_ << ")." << std::endl;

@@ -86,21 +86,6 @@ class Client {
         }
     }
 
-    void call_subtraction(const std::int32_t x, const std::int32_t y) {
-        auto future = this->client_->subtraction(x, y);
-        if (future.wait_for(5s) != std::future_status::ready) {
-            std::cerr << "[Client] subtraction timed out" << std::endl;
-            return;
-        }
-        try {
-            const std::int32_t result = future.get();
-            std::cout << "[Client] subtraction => " << x << " - " << y << " = " << result << std::endl;
-        }
-        catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
-            std::cout << "[Client] subtraction(" << x << ", " << y << ") raised exception: " << e.what() << std::endl;
-        }
-    }
-
   private:
     std::shared_ptr<::calculator_example::Calculator> client_ = nullptr;
     ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
@@ -117,7 +102,6 @@ int main() {
     // 依次演示: out 参数 / 正常运算 / 触发溢出异常.
     client.call_representation_limits();
     client.call_addition(5, 3);
-    client.call_subtraction(5, 3);
     client.call_addition(std::numeric_limits<std::int32_t>::max(), 1);
 
     std::cout << "[Client] done." << std::endl;

@@ -80,7 +80,7 @@ class HelloWorldSubscriber {
             ::eprosima::fastdds::dds::DataReader *reader,
             const ::eprosima::fastdds::dds::SubscriptionMatchedStatus& info
         ) override {
-            static_cast<void>(reader);
+            (void)reader;
             if (info.current_count_change == 1) {
                 std::cout << "[" << this->name_ << "] a publisher matched (total=" << info.current_count << ")." << std::endl;
             }

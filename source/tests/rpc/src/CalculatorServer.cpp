@@ -75,7 +75,7 @@ class Server {
 std::atomic<bool> g_stop_requested{false};
 
 void signal_handler(const int signum) {
-    static_cast<void>(signum);
+    (void)signum;
     g_stop_requested.store(true);
 }
 
