@@ -23,8 +23,11 @@ struct CalculatorServerImpl: ::calculator_example::CalculatorServerImplementatio
         const ::eprosima::fastdds::dds::rpc::RpcRequest&,
         const std::int32_t value1, const std::int32_t value2
     ) override {
-        if (value1 > 0 && value2 > std::numeric_limits<std::int32_t>::max() - value1
-            || value1 < 0 && value2 < std::numeric_limits<std::int32_t>::min() - value1) {
+        const auto min = std::numeric_limits<std::int32_t>::min();
+        const auto max = std::numeric_limits<std::int32_t>::max();
+
+        if ((value1 > 0 && value2 > max - value1)
+            || (value1 < 0 && value2 < min - value1)) {
             throw ::calculator_example::OverflowException{};
         }
 
