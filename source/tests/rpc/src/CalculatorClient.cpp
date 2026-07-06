@@ -26,7 +26,7 @@ class Client {
     ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
     std::string service_name_;
   public:
-    explicit Client(const std::string& service_name): service_name_(service_name) {}
+    explicit Client(const std::string& service_name): service_name_{service_name} {}
     ~Client() {
         this->client_.reset();
         if (this->participant_ != nullptr) {

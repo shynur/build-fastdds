@@ -21,7 +21,7 @@ using namespace std::literals;
 
 class Server {
   public:
-    explicit Server(const std::string& service_name): service_name_(service_name) {}
+    explicit Server(const std::string& service_name): service_name_{service_name} {}
     ~Server() {
         this->server_.reset();
         if (this->participant_ != nullptr) {
