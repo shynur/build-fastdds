@@ -1,4 +1,3 @@
-# CMakeLists.txt - RPC calculator 示例 (现代 CMake 3.23 写法)
 cmake_minimum_required(VERSION 3.23)
 
 project(rpc_calculator
@@ -7,8 +6,8 @@ project(rpc_calculator
     LANGUAGES CXX
 )
 
-find_package(fastcdr 2 REQUIRED)
-find_package(fastdds 3 REQUIRED)
+find_package(fastcdr 2   REQUIRED)
+find_package(fastdds 3.4 REQUIRED)
 find_package(Threads REQUIRED)
 
 # fastddsgen 生成的类型/RPC 代码, 打成一个静态库供 client 与 server 复用 (只编译一次).
