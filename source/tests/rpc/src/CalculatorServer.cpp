@@ -1,4 +1,3 @@
-// CalculatorServer.cpp - RPC 服务端
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -17,12 +16,12 @@
 #include "CalculatorServerImpl.hpp"
 #include "types/calculatorServer.hpp"
 
+
 using namespace std::literals;
 
 class Server {
   public:
     explicit Server(const std::string& service_name): service_name_(service_name) {}
-
     ~Server() {
         this->server_.reset();
         if (this->participant_ != nullptr) {
@@ -30,7 +29,6 @@ class Server {
             ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance()->delete_participant(this->participant_);
         }
     }
-
     void init() {
         const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
         if (!factory) {
@@ -46,7 +44,9 @@ class Server {
         const std::shared_ptr<::calculator_example::CalculatorServer_IServerImplementation> impl = std::make_shared<CalculatorServerImpl>();
         const auto qos = ::eprosima::fastdds::dds::ReplierQos{};
         // thread_pool_size = 0 表示使用单线程处理请求
-        this->server_ = ::calculator_example::create_CalculatorServer(*this->participant_, this->service_name_.c_str(), qos, 0, impl);
+        this->server_ = ::calculator_example::create_CalculatorServer(
+            *this->participant_, this->service_name_.c_str(), qos, 0, impl
+        );
         if (!this->server_) {
             throw std::runtime_error{"Server initialization failed"};
         }
@@ -68,12 +68,10 @@ class Server {
 
   private:
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_ = nullptr;
-    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
+    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
     std::string service_name_;
 };
 
-// 信号处理只做一件事: 置位停止标志 (async-signal-safe).  真正的 stop()/join()
-// 由主线程执行, 避免在信号上下文里调用非异步信号安全的清理逻辑.
 std::atomic<bool> g_stop_requested{false};
 
 void signal_handler(const int signum) {

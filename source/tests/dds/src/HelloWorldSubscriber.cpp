@@ -114,7 +114,7 @@ class HelloWorldSubscriber {
     ::eprosima::fastdds::dds::Subscriber *subscriber_ = nullptr;
     ::eprosima::fastdds::dds::Topic *topic_ = nullptr;
     ::eprosima::fastdds::dds::DataReader *reader_ = nullptr;
-    ::eprosima::fastdds::dds::TypeSupport type_ = new HelloWorldPubSubType;
+    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType};
     SubListener listener_;
 };
 

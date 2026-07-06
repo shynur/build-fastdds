@@ -1,27 +1,8 @@
-// calculator.idl - 一个简单但完整的 RPC 服务接口:
-//   - 演示 out 参数, in 参数, 返回值, 以及自定义 exception (raises)
-module calculator_example
-{
-    // 当运算结果无法用 32 位整数表示时抛出
-    exception OverflowException
-    {
-    };
-
-    interface Calculator
-    {
-        // 返回 32 位整数可表示的最小值与最大值 (演示 out 参数)
-        void representation_limits(
-                out long min_value,
-                out long max_value);
-
-        // 返回 value1 + value2 (演示 in 参数, 返回值与异常)
-        long addition(
-                in long value1,
-                in long value2) raises (OverflowException);
-
-        // 返回 value1 - value2
-        long subtraction(
-                in long value1,
-                in long value2) raises (OverflowException);
+module calculator_example {
+    exception OverflowException {};  // 当运算结果无法用 32 位整数表示时抛出
+    interface Calculator {
+        void representation_limits(out long min_value, out long max_value);
+        long addition(in long value1, in long value2) raises (OverflowException);
+        long subtraction(in long value1, in long value2) raises (OverflowException);
     };
 };

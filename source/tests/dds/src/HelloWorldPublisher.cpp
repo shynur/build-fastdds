@@ -109,7 +109,7 @@ class HelloWorldPublisher {
     ::eprosima::fastdds::dds::Publisher *publisher_ = nullptr;
     ::eprosima::fastdds::dds::Topic *topic_ = nullptr;
     ::eprosima::fastdds::dds::DataWriter *writer_ = nullptr;
-    ::eprosima::fastdds::dds::TypeSupport type_ = new HelloWorldPubSubType;
+    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType};
     PubListener listener_;
 };
 

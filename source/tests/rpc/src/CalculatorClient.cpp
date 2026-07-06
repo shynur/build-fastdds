@@ -1,4 +1,3 @@
-// CalculatorClient.cpp - RPC 客户端
 #include <chrono>
 #include <cstdint>
 #include <future>
@@ -21,10 +20,10 @@
 
 using namespace std::literals;
 
+
 class Client {
   public:
     explicit Client(const std::string& service_name): service_name_(service_name) {}
-
     ~Client() {
         this->client_.reset();
         if (this->participant_ != nullptr) {
@@ -32,7 +31,6 @@ class Client {
             ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance()->delete_participant(this->participant_);
         }
     }
-
     void init() {
         const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
         if (!factory) {
@@ -63,7 +61,9 @@ class Client {
         }
         try {
             const auto limits = future.get();
-            std::cout << "[Client] representation_limits => min=" << limits.min_value << ", max=" << limits.max_value << std::endl;
+            std::cout << "[Client] representation_limits => min=" << limits.min_value
+                      << ", max=" << limits.max_value
+                      << std::endl;
         }
         catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
             std::cerr << "[Client] representation_limits RPC exception: " << e.what() << std::endl;
@@ -103,7 +103,7 @@ class Client {
 
   private:
     std::shared_ptr<::calculator_example::Calculator> client_ = nullptr;
-    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
+    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
     std::string service_name_;
 };
 
