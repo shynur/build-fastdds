@@ -10,7 +10,6 @@ find_package(fastcdr 2   REQUIRED)
 find_package(fastdds 3.4 REQUIRED)
 find_package(Threads REQUIRED)
 
-# fastddsgen 生成的类型/RPC 代码, 打成一个静态库供 client 与 server 复用 (只编译一次).
 add_library(calculator_gen STATIC)
 target_sources(calculator_gen
     PRIVATE
@@ -21,14 +20,14 @@ target_sources(calculator_gen
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS types
-        FILES types/calculator.hpp
-              types/calculator_details.hpp
-              types/calculatorClient.hpp
-              types/calculatorServer.hpp
-              types/calculatorServerImpl.hpp
-              types/calculatorPubSubTypes.hpp
-              types/calculatorCdrAux.hpp
-              types/calculatorTypeObjectSupport.hpp
+        FILES calculator.hpp
+              calculator_details.hpp
+              calculatorClient.hpp
+              calculatorServer.hpp
+              calculatorServerImpl.hpp
+              calculatorPubSubTypes.hpp
+              calculatorCdrAux.hpp
+              calculatorTypeObjectSupport.hpp
 )
 target_compile_features(calculator_gen PUBLIC cxx_std_17)
 target_link_libraries(calculator_gen PUBLIC fastdds fastcdr Threads::Threads)
