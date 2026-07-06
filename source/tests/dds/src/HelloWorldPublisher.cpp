@@ -1,6 +1,3 @@
-// HelloWorldPublisher.cpp - 1 个 DDS publisher
-#include "types/HelloWorldPubSubTypes.hpp"
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -16,12 +13,14 @@
 #include <fastdds/dds/publisher/Publisher.hpp>
 #include <fastdds/dds/topic/TypeSupport.hpp>
 
+#include "types/HelloWorldPubSubTypes.hpp"
+
+
 using namespace std::literals;
 
 class HelloWorldPublisher {
   public:
     HelloWorldPublisher() = default;
-
     ~HelloWorldPublisher() {
         if (this->writer_ != nullptr) {
             this->publisher_->delete_datawriter(this->writer_);
@@ -36,7 +35,6 @@ class HelloWorldPublisher {
             ::eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->delete_participant(this->participant_);
         }
     }
-
     bool init() {
         auto pqos = ::eprosima::fastdds::dds::DomainParticipantQos{};
         pqos.name("HelloWorld_pub_participant");
@@ -47,7 +45,9 @@ class HelloWorldPublisher {
 
         this->type_.register_type(this->participant_);
 
-        this->topic_ = this->participant_->create_topic("HelloWorldTopic", this->type_.get_type_name(), ::eprosima::fastdds::dds::TOPIC_QOS_DEFAULT);
+        this->topic_ = this->participant_->create_topic(
+            "HelloWorldTopic", this->type_.get_type_name(), ::eprosima::fastdds::dds::TOPIC_QOS_DEFAULT
+        );
         if (this->topic_ == nullptr) {
             return false;
         }
@@ -57,16 +57,16 @@ class HelloWorldPublisher {
             return false;
         }
 
-        this->writer_ = this->publisher_->create_datawriter(this->topic_, ::eprosima::fastdds::dds::DATAWRITER_QOS_DEFAULT, &this->listener_);
+        this->writer_ = this->publisher_->create_datawriter(
+            this->topic_, ::eprosima::fastdds::dds::DATAWRITER_QOS_DEFAULT, &this->listener_
+        );
         if (this->writer_ == nullptr) {
             return false;
         }
         std::cout << "[Publisher] created, waiting for subscribers..." << std::endl;
         return true;
     }
-
     void run(const std::uint32_t samples) {
-        // 等待至少 1 个匹配的 subscriber
         while (this->listener_.matched_ == 0) {
             std::this_thread::sleep_for(100ms);
         }
@@ -76,11 +76,12 @@ class HelloWorldPublisher {
             this->hello_.index(i);
             this->hello_.message("HelloWorld from publisher");
             this->writer_->write(&this->hello_);
-            std::cout << "[Publisher] SENT sample: index=" << this->hello_.index() << " message='" << this->hello_.message() << "'" << std::endl;
+            std::cout << "[Publisher] SENT sample: index=" << this->hello_.index()
+                      << " message='" << this->hello_.message() << "'"
+                      << std::endl;
             std::this_thread::sleep_for(500ms);
         }
-        // 给 subscribers 一点时间收尾
-        std::this_thread::sleep_for(500ms);
+        std::this_thread::sleep_for(500ms);  // 给 subscribers 一点时间收尾
     }
 
     class PubListener : public ::eprosima::fastdds::dds::DataWriterListener {
@@ -104,17 +105,17 @@ class HelloWorldPublisher {
 
   private:
     HelloWorld hello_;
-    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
-    ::eprosima::fastdds::dds::Publisher* publisher_ = nullptr;
-    ::eprosima::fastdds::dds::Topic* topic_ = nullptr;
-    ::eprosima::fastdds::dds::DataWriter* writer_ = nullptr;
-    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType};
+    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
+    ::eprosima::fastdds::dds::Publisher *publisher_ = nullptr;
+    ::eprosima::fastdds::dds::Topic *topic_ = nullptr;
+    ::eprosima::fastdds::dds::DataWriter *writer_ = nullptr;
+    ::eprosima::fastdds::dds::TypeSupport type_ = new HelloWorldPubSubType;
     PubListener listener_;
 };
 
 std::atomic<bool> HelloWorldPublisher::running_{true};
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     std::uint32_t samples = 10;
     if (argc > 1) {
         samples = static_cast<std::uint32_t>(std::atoi(argv[1]));

@@ -1,6 +1,4 @@
-// HelloWorld.idl - 简单的 DDS 消息类型
-struct HelloWorld
-{
+struct HelloWorld {
     unsigned long index;
     string message;
 };

@@ -1,6 +1,3 @@
-// HelloWorldSubscriber.cpp - DDS subscriber (可运行多个实例)
-#include "types/HelloWorldPubSubTypes.hpp"
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -17,12 +14,14 @@
 #include <fastdds/dds/subscriber/Subscriber.hpp>
 #include <fastdds/dds/topic/TypeSupport.hpp>
 
+#include "types/HelloWorldPubSubTypes.hpp"
+
+
 using namespace std::literals;
 
 class HelloWorldSubscriber {
   public:
     explicit HelloWorldSubscriber(const std::string& name): name_(name), listener_(name) {}
-
     ~HelloWorldSubscriber() {
         if (this->reader_ != nullptr) {
             this->subscriber_->delete_datareader(this->reader_);
@@ -37,7 +36,6 @@ class HelloWorldSubscriber {
             ::eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->delete_participant(this->participant_);
         }
     }
-
     bool init() {
         auto pqos = ::eprosima::fastdds::dds::DomainParticipantQos{};
         pqos.name(this->name_ + "_participant");
@@ -48,7 +46,9 @@ class HelloWorldSubscriber {
 
         this->type_.register_type(this->participant_);
 
-        this->topic_ = this->participant_->create_topic("HelloWorldTopic", this->type_.get_type_name(), ::eprosima::fastdds::dds::TOPIC_QOS_DEFAULT);
+        this->topic_ = this->participant_->create_topic(
+            "HelloWorldTopic", this->type_.get_type_name(), ::eprosima::fastdds::dds::TOPIC_QOS_DEFAULT
+        );
         if (this->topic_ == nullptr) {
             return false;
         }
@@ -58,25 +58,28 @@ class HelloWorldSubscriber {
             return false;
         }
 
-        this->reader_ = this->subscriber_->create_datareader(this->topic_, ::eprosima::fastdds::dds::DATAREADER_QOS_DEFAULT, &this->listener_);
+        this->reader_ = this->subscriber_->create_datareader(
+            this->topic_, ::eprosima::fastdds::dds::DATAREADER_QOS_DEFAULT, &this->listener_
+        );
         if (this->reader_ == nullptr) {
             return false;
         }
         std::cout << "[" << this->name_ << "] created, waiting for data..." << std::endl;
         return true;
     }
-
     void run() {
         while (HelloWorldSubscriber::running_) {
             std::this_thread::sleep_for(100ms);
         }
     }
 
-    class SubListener : public ::eprosima::fastdds::dds::DataReaderListener {
+    class SubListener: public ::eprosima::fastdds::dds::DataReaderListener {
       public:
         explicit SubListener(const std::string& name): name_(name) {}
-
-        void on_subscription_matched(::eprosima::fastdds::dds::DataReader* reader, const ::eprosima::fastdds::dds::SubscriptionMatchedStatus& info) override {
+        void on_subscription_matched(
+            ::eprosima::fastdds::dds::DataReader *reader,
+            const ::eprosima::fastdds::dds::SubscriptionMatchedStatus& info
+        ) override {
             static_cast<void>(reader);
             if (info.current_count_change == 1) {
                 std::cout << "[" << this->name_ << "] a publisher matched (total=" << info.current_count << ")." << std::endl;
@@ -85,13 +88,15 @@ class HelloWorldSubscriber {
                 std::cout << "[" << this->name_ << "] a publisher unmatched (total=" << info.current_count << ")." << std::endl;
             }
         }
-
-        void on_data_available(::eprosima::fastdds::dds::DataReader* reader) override {
+        void on_data_available(::eprosima::fastdds::dds::DataReader *reader) override {
             auto info = ::eprosima::fastdds::dds::SampleInfo{};
             while (reader->take_next_sample(&this->sample_, &info) == ::eprosima::fastdds::dds::RETCODE_OK) {
                 if (info.valid_data) {
                     ++this->received_;
-                    std::cout << "[" << this->name_ << "] RECEIVED sample: index=" << this->sample_.index() << " message='" << this->sample_.message() << "' (total received=" << this->received_ << ")" << std::endl;
+                    std::cout << "[" << this->name_ << "] RECEIVED sample: index=" << this->sample_.index()
+                              << " message='" << this->sample_.message()
+                              << "' (total received=" << this->received_ << ")"
+                              << std::endl;
                 }
             }
         }
@@ -105,17 +110,17 @@ class HelloWorldSubscriber {
 
   private:
     std::string name_;
-    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
-    ::eprosima::fastdds::dds::Subscriber* subscriber_ = nullptr;
-    ::eprosima::fastdds::dds::Topic* topic_ = nullptr;
-    ::eprosima::fastdds::dds::DataReader* reader_ = nullptr;
-    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType};
+    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
+    ::eprosima::fastdds::dds::Subscriber *subscriber_ = nullptr;
+    ::eprosima::fastdds::dds::Topic *topic_ = nullptr;
+    ::eprosima::fastdds::dds::DataReader *reader_ = nullptr;
+    ::eprosima::fastdds::dds::TypeSupport type_ = new HelloWorldPubSubType;
     SubListener listener_;
 };
 
 std::atomic<bool> HelloWorldSubscriber::running_{true};
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     auto name = std::string{"Subscriber"};
     if (argc > 1) {
         name = argv[1];
