@@ -19,15 +19,15 @@ target_sources(calculator_gen
         src/types/calculatorTypeObjectSupport.cxx
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS types
-        FILES calculator.hpp
-              calculator_details.hpp
-              calculatorClient.hpp
-              calculatorServer.hpp
-              calculatorServerImpl.hpp
-              calculatorPubSubTypes.hpp
-              calculatorCdrAux.hpp
-              calculatorTypeObjectSupport.hpp
+        BASE_DIRS src
+        FILES src/types/calculator.hpp
+              src/types/calculator_details.hpp
+              src/types/calculatorClient.hpp
+              src/types/calculatorServer.hpp
+              src/types/calculatorServerImpl.hpp
+              src/types/calculatorPubSubTypes.hpp
+              src/types/calculatorCdrAux.hpp
+              src/types/calculatorTypeObjectSupport.hpp
 )
 target_compile_features(calculator_gen PUBLIC cxx_std_17)
 target_link_libraries(calculator_gen PUBLIC fastdds fastcdr Threads::Threads)
