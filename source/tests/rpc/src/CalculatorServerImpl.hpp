@@ -23,10 +23,11 @@ struct CalculatorServerImpl: ::calculator_example::CalculatorServerImplementatio
         const ::eprosima::fastdds::dds::rpc::RpcRequest&,
         const std::int32_t value1, const std::int32_t value2
     ) override {
-        // 两个同号数相加, 结果却异号 => 溢出
-        if ((value1 < 0 == value2 < 0) && (double(value1) + double(value2) < 0 != value1 < 0)) {
+        if (value1 > 0 && value2 > std::numeric_limits<std::int32_t>::max() - value1
+            || value1 < 0 && value2 < std::numeric_limits<std::int32_t>::min() - value1) {
             throw ::calculator_example::OverflowException{};
         }
+
         return value1 + value2;
     }
 };
