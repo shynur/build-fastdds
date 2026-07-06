@@ -22,6 +22,9 @@ using namespace std::literals;
 
 
 class Client {
+    std::shared_ptr<::calculator_example::Calculator> client_ = nullptr;
+    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
+    std::string service_name_;
   public:
     explicit Client(const std::string& service_name): service_name_(service_name) {}
     ~Client() {
@@ -85,11 +88,6 @@ class Client {
             std::cout << "[Client] addition(" << x << ", " << y << ") raised exception: " << e.what() << std::endl;
         }
     }
-
-  private:
-    std::shared_ptr<::calculator_example::Calculator> client_ = nullptr;
-    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
-    std::string service_name_;
 };
 
 int main() {
