@@ -47,3 +47,6 @@ target_link_libraries(urpc2 PUBLIC urpc2_processor_gen)
 
 add_executable(urpc2_simple examples/simple.cpp)
 target_link_libraries(urpc2_simple PRIVATE urpc2)
+
+add_executable(urpc2_mesh_node examples/mesh_node.cpp)
+target_link_libraries(urpc2_mesh_node PRIVATE urpc2)
