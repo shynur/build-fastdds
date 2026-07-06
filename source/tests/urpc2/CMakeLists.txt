@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(urpc2
     VERSION 0.1.0
-    DESCRIPTION "A tiny RPC-over-DDS wrapper"
+    DESCRIPTION "小型 RPC-over-DDS 包装层"
     LANGUAGES CXX
 )
 

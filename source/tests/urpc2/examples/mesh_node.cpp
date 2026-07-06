@@ -15,10 +15,10 @@
 namespace {
 
 /*
- * Print the command line accepted by one mesh node process.
+ * 打印单个网格节点进程接受的命令行。
  *
- * The process name is the Urpc2 endpoint name. Remaining non-option arguments
- * are all known node names; the process filters out its own name.
+ * 进程名称就是 Urpc2 端点名称。剩余的非选项参数是所有已知节点名称；进程会
+ * 过滤掉自己的名称。
  */
 std::string usage(const char* const program)
 {
@@ -26,11 +26,10 @@ std::string usage(const char* const program)
 }
 
 /*
- * Build a deterministic pseudo-random seed.
+ * 构建确定性的伪随机种子。
  *
- * The test wants shuffled call order without making failures impossible to
- * reproduce. Using the node name as the seed gives every node a different but
- * stable peer order sequence.
+ * 测试需要打乱调用顺序，但不能让失败变得不可复现。使用节点名称作为种子，
+ * 可以让每个节点获得不同但稳定的对等节点顺序序列。
  */
 unsigned seed_for(const std::string& text)
 {
@@ -38,12 +37,11 @@ unsigned seed_for(const std::string& text)
 }
 
 /*
- * Perform one synchronous RPC with bounded retries.
+ * 执行一次带有限重试的同步 RPC。
  *
- * A CALL line is written before entering Urpc2::call() so a stuck test log
- * identifies the exact edge being exercised. A successful response must echo
- * the receiver name plus the original payload, proving that the intended peer
- * answered rather than another process with a different name.
+ * 进入 Urpc2::call() 前会写入一行 CALL，因此卡住的测试日志能指出正在测试的
+ * 精确边。成功响应必须回显接收方名称和原始载荷，以证明是目标对等节点在
+ * 应答，而不是另一个不同名称的进程。
  */
 bool call_peer(
         ::urpc2::Urpc2& rpc,
@@ -95,10 +93,9 @@ bool call_peer(
 }
 
 /*
- * Parse mesh options.
+ * 解析网格选项。
  *
- * The first version only needs --rounds=N. Keeping the parser tiny makes the
- * example easy to copy into ad-hoc container tests.
+ * 第一版只需要 --rounds=N。保持解析器小巧，便于将示例复制到临时容器测试中。
  */
 int parse_rounds(int argc, char** argv)
 {
@@ -121,14 +118,12 @@ int parse_rounds(int argc, char** argv)
 }  // namespace
 
 /*
- * Run one mesh node.
+ * 运行一个网格节点。
  *
- * Each process registers the same "echo" handler, waits for peers to start,
- * then performs several rounds of single-threaded outgoing calls. Within each
- * round the peer list is shuffled and a small random gap is inserted between
- * calls. Six independently running processes therefore create a naturally
- * interleaved, out-of-order RPC stream without starting multiple client
- * workers inside a process.
+ * 每个进程都会注册相同的 "echo" 处理器，等待对等节点启动，然后执行多轮
+ * 单线程出站调用。每轮都会打乱对等节点列表，并在调用之间插入较小的随机
+ * 间隔。因此，六个独立运行的进程无需在进程内启动多个客户端工作线程，也能
+ * 自然地产生交错且乱序的 RPC 流。
  */
 int run(int argc, char** argv)
 {
@@ -155,8 +150,8 @@ int run(int argc, char** argv)
             "echo",
             [self_name](std::string args) {
                 /*
-                 * Add deterministic handler jitter so replies do not follow
-                 * exactly the same order as requests under multi-process load.
+                 * 添加确定性的处理器抖动，使多进程负载下的回复不会完全按照
+                 * 请求顺序返回。
                  */
                 const auto delay_ms = 10 + (std::hash<std::string>{}(self_name + args) % 81);
                 std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<int>(delay_ms)});
@@ -173,9 +168,8 @@ int run(int argc, char** argv)
     auto call_index = 0;
     for (int round = 1; round <= rounds; ++round) {
         /*
-         * Shuffle once per round and then call peers sequentially. The
-         * per-process sequence remains single-threaded, while all containers
-         * run their own sequence concurrently.
+         * 每轮打乱一次，然后顺序调用对等节点。每个进程内的序列仍然是单线程
+         * 的，而所有容器会并发运行各自的序列。
          */
         auto round_peers = peers;
         std::shuffle(round_peers.begin(), round_peers.end(), rng);
@@ -189,9 +183,8 @@ int run(int argc, char** argv)
     }
 
     /*
-     * Keep serving briefly after finishing outgoing calls. This prevents a fast
-     * node from disappearing while a slower peer still has a final request for
-     * it in the current test run.
+     * 完成出站调用后继续短暂提供服务。这可以防止较快节点在较慢对等节点的
+     * 当前测试运行中仍有最后一个请求发往它时提前消失。
      */
     std::cout << (ok ? "DONE " : "FAILED ") << self_name << '\n';
     std::this_thread::sleep_for(std::chrono::seconds{20});
@@ -199,11 +192,10 @@ int run(int argc, char** argv)
 }
 
 /*
- * Install logging safeguards around the test process.
+ * 为测试进程安装日志保护。
  *
- * Unit-buffered streams make Docker log files useful even if the process is
- * interrupted. The terminate handler records exceptions escaping background
- * Fast DDS threads or destructors before exiting.
+ * 单元缓冲流让进程即使被中断，Docker 日志文件也仍然有用。terminate 处理器会
+ * 在退出前记录从后台 Fast DDS 线程或析构函数逃逸的异常。
  */
 int main(int argc, char** argv)
 {

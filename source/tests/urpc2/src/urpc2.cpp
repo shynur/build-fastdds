@@ -23,11 +23,10 @@ namespace urpc2 {
 namespace {
 
 /*
- * Create a plain DomainParticipant in domain 0.
+ * 在域 0 中创建一个普通 DomainParticipant。
  *
- * The first version intentionally keeps QoS customization out of the public
- * surface. All transport, discovery, and participant defaults come from Fast
- * DDS so the wrapper remains small and easy to inspect.
+ * 第一版有意不把 QoS 自定义暴露到公共接口。所有传输、发现和 participant
+ * 默认值都来自 Fast DDS，因此该包装层保持小巧且易于检查。
  */
 ::eprosima::fastdds::dds::DomainParticipant* create_participant()
 {
@@ -45,11 +44,11 @@ namespace {
 }
 
 /*
- * Destroy a participant and all entities still owned by it.
+ * 销毁 participant 以及它仍然拥有的所有实体。
  *
- * Generated RPC clients and servers normally clean up their own requester,
- * replier, and service objects. delete_contained_entities() is still called as
- * a defensive cleanup boundary before returning the participant to the factory.
+ * 生成的 RPC 客户端和服务器通常会清理自己的 requester、replier 和 service
+ * 对象。这里仍然会在把 participant 交还给工厂前调用
+ * delete_contained_entities()，作为防御性的清理边界。
  */
 void delete_participant(::eprosima::fastdds::dds::DomainParticipant* participant) noexcept
 {
@@ -65,12 +64,11 @@ void delete_participant(::eprosima::fastdds::dds::DomainParticipant* participant
 }
 
 /*
- * RAII wrapper for one short-lived client participant.
+ * 单个短生命周期客户端 participant 的 RAII 包装。
  *
- * The current call path creates a temporary participant and generated
- * ProcessorClient per RPC call. This is intentionally inefficient, but avoids
- * sharing generated client state while the test framework is still validating
- * the simplest correctness model.
+ * 当前调用路径会为每次 RPC 调用创建一个临时 participant 和生成的
+ * ProcessorClient。这有意牺牲效率，但在测试框架仍在验证最简单正确性模型
+ * 时，可以避免共享生成的客户端状态。
  */
 class TemporaryParticipant {
   public:
@@ -95,23 +93,21 @@ class TemporaryParticipant {
 }  // namespace
 
 /*
- * Hidden implementation for the public Urpc2 facade.
+ * 公共 Urpc2 门面的隐藏实现。
  *
- * The public header stays independent from Fast DDS headers. This class owns
- * the generated RPC server, the server thread, and the handler registry. Calls
- * use the generated ProcessorClient for the IDL operation:
+ * 公共头文件保持不依赖 Fast DDS 头文件。此类拥有生成的 RPC 服务器、服务器
+ * 线程和处理器注册表。调用会使用生成的 ProcessorClient 执行 IDL 操作：
  *
  *     router(in string handler_name, in string args) -> string
  */
 class Urpc2::Impl {
   public:
     /*
-     * Construct the receiving side of one Urpc2 endpoint.
+     * 构造一个 Urpc2 端点的接收侧。
      *
-     * The Urpc2 name becomes the generated RPC service name. The Router object
-     * adapts generated server callbacks back into this Impl, and the server
-     * run loop is placed on a background thread so the application can both
-     * serve requests and issue outgoing calls.
+     * Urpc2 名称会成为生成的 RPC 服务名。Router 对象将生成服务器回调适配回此
+     * Impl，服务器运行循环放在后台线程上，因此应用程序既能处理请求，也能
+     * 发起出站调用。
      */
     explicit Impl(std::string name): name_{std::move(name)}
     {
@@ -137,11 +133,11 @@ class Urpc2::Impl {
     }
 
     /*
-     * Stop the server before deleting its participant.
+     * 删除 participant 前停止服务器。
      *
-     * Generated server destruction also calls stop(), but doing it explicitly
-     * here makes the shutdown order obvious: stop the run loop, join the thread,
-     * release generated server objects, then delete the participant.
+     * 生成服务器的析构也会调用 stop()，但这里显式执行可让关闭顺序更清楚：
+     * 停止运行循环、等待线程结束、释放生成的服务器对象，然后删除
+     * participant。
      */
     ~Impl()
     {
@@ -162,11 +158,10 @@ class Urpc2::Impl {
     }
 
     /*
-     * Store a handler in the local registry.
+     * 将处理器存入本地注册表。
      *
-     * Re-registering the same name replaces the old callable. The mutex only
-     * protects registry mutation and lookup; handler execution happens outside
-     * the critical section in dispatch().
+     * 重新注册同名处理器会替换旧的可调用对象。互斥量只保护注册表变更和
+     * 查找；处理器执行发生在 dispatch() 的临界区之外。
      */
     void register_handler(std::string handler_name, Handler handler)
     {
@@ -182,13 +177,11 @@ class Urpc2::Impl {
     }
 
     /*
-     * Execute one synchronous outgoing RPC.
+     * 执行一次同步出站 RPC。
      *
-     * A temporary participant/client pair is created for the receiver service
-     * name. Fast DDS discovery is asynchronous, so the current conservative
-     * implementation waits before sending the request. Once the generated
-     * future is returned, the caller-provided timeout bounds only the reply
-     * wait after the request has been sent.
+     * 会为接收方服务名创建一个临时 participant/client 对。Fast DDS 发现是异步
+     * 的，因此当前保守实现会在发送请求前等待。生成的 future 返回后，调用方
+     * 提供的超时时间只限制请求发送后的回复等待。
      */
     std::string call(
             const std::string& receiver_name,
@@ -213,9 +206,8 @@ class Urpc2::Impl {
         }
 
         /*
-         * Give the requester and replier endpoints time to discover each other.
-         * This keeps the first-version behavior deterministic for examples and
-         * multi-process tests, at the cost of per-call latency.
+         * 给 requester 和 replier 端点留出彼此发现的时间。这让第一版行为在
+         * 示例和多进程测试中保持确定性，代价是增加每次调用的延迟。
          */
         std::this_thread::sleep_for(std::chrono::seconds{5});
 
@@ -228,11 +220,10 @@ class Urpc2::Impl {
     }
 
     /*
-     * Route an incoming generated RPC request to a registered user handler.
+     * 将传入的生成 RPC 请求路由到已注册的用户处理器。
      *
-     * The handler is copied while holding the registry mutex and invoked after
-     * releasing it. This lets one handler register or replace other handlers
-     * without deadlocking the dispatch path.
+     * 持有注册表互斥量时复制处理器，并在释放互斥量后调用。这样一个处理器就
+     * 可以注册或替换其他处理器，而不会让分发路径死锁。
      */
     std::string dispatch(const std::string& handler_name, const std::string& args)
     {
@@ -252,10 +243,10 @@ class Urpc2::Impl {
 
   private:
     /*
-     * Adapter from generated ProcessorServer_IServerImplementation to Impl.
+     * 从生成的 ProcessorServer_IServerImplementation 到 Impl 的适配器。
      *
-     * The IDL has only one operation, router(). The first string selects the
-     * user handler and the second string is passed through as opaque payload.
+     * IDL 只有一个操作 router()。第一个字符串选择用户处理器，第二个字符串
+     * 作为不透明载荷透传。
      */
     class Router final : public ProcessorServer_IServerImplementation {
       public:

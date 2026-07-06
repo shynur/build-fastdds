@@ -7,16 +7,16 @@
 int main()
 {
     /*
-     * The smoke test keeps both endpoints in one process so the public API can
-     * be read without Docker or process orchestration. Each endpoint still owns
-     * an independent DDS RPC service named by the Urpc2 constructor argument.
+     * 冒烟测试将两个端点放在同一个进程中，这样无需 Docker 或进程编排也能
+     * 阅读公共 API。每个端点仍然拥有一个独立的 DDS RPC 服务，服务名由
+     * Urpc2 构造函数参数指定。
      */
     auto alice = ::urpc2::Urpc2{"alice"};
     auto bob = ::urpc2::Urpc2{"bob"};
 
     /*
-     * Handlers receive and return opaque strings. This example uses JSON-shaped
-     * text but avoids adding a JSON dependency to the first-version framework.
+     * 处理器接收并返回不透明字符串。此示例使用形似 JSON 的文本，但避免为
+     * 第一版框架增加 JSON 依赖。
      */
     alice.register_handler(
             "sub",
@@ -37,9 +37,8 @@ int main()
             });
 
     /*
-     * Calls name the receiver endpoint first and the receiver-local handler
-     * second. The same handler name could exist on both endpoints without
-     * ambiguity because endpoint names are unique.
+     * 调用时先给出接收端点名称，再给出接收端点本地的处理器名称。由于端点
+     * 名称唯一，同一个处理器名称可以同时存在于两个端点上而不会产生歧义。
      */
     const auto sub_result = bob.call("alice", "sub", "[5,3]");
     const auto add_result = alice.call("bob", "add", "[5,3]");
