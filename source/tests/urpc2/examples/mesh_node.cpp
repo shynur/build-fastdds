@@ -14,16 +14,37 @@
 
 namespace {
 
+/*
+ * Print the command line accepted by one mesh node process.
+ *
+ * The process name is the Urpc2 endpoint name. Remaining non-option arguments
+ * are all known node names; the process filters out its own name.
+ */
 std::string usage(const char* const program)
 {
     return std::string{"usage: "} + program + " <self-name> <peer-name>... [--rounds=N]";
 }
 
+/*
+ * Build a deterministic pseudo-random seed.
+ *
+ * The test wants shuffled call order without making failures impossible to
+ * reproduce. Using the node name as the seed gives every node a different but
+ * stable peer order sequence.
+ */
 unsigned seed_for(const std::string& text)
 {
     return static_cast<unsigned>(std::hash<std::string>{}(text));
 }
 
+/*
+ * Perform one synchronous RPC with bounded retries.
+ *
+ * A CALL line is written before entering Urpc2::call() so a stuck test log
+ * identifies the exact edge being exercised. A successful response must echo
+ * the receiver name plus the original payload, proving that the intended peer
+ * answered rather than another process with a different name.
+ */
 bool call_peer(
         ::urpc2::Urpc2& rpc,
         const std::string& self_name,
@@ -73,6 +94,12 @@ bool call_peer(
     return false;
 }
 
+/*
+ * Parse mesh options.
+ *
+ * The first version only needs --rounds=N. Keeping the parser tiny makes the
+ * example easy to copy into ad-hoc container tests.
+ */
 int parse_rounds(int argc, char** argv)
 {
     auto rounds = 8;
@@ -93,6 +120,16 @@ int parse_rounds(int argc, char** argv)
 
 }  // namespace
 
+/*
+ * Run one mesh node.
+ *
+ * Each process registers the same "echo" handler, waits for peers to start,
+ * then performs several rounds of single-threaded outgoing calls. Within each
+ * round the peer list is shuffled and a small random gap is inserted between
+ * calls. Six independently running processes therefore create a naturally
+ * interleaved, out-of-order RPC stream without starting multiple client
+ * workers inside a process.
+ */
 int run(int argc, char** argv)
 {
     if (argc < 2) {
@@ -117,6 +154,10 @@ int run(int argc, char** argv)
     rpc.register_handler(
             "echo",
             [self_name](std::string args) {
+                /*
+                 * Add deterministic handler jitter so replies do not follow
+                 * exactly the same order as requests under multi-process load.
+                 */
                 const auto delay_ms = 10 + (std::hash<std::string>{}(self_name + args) % 81);
                 std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<int>(delay_ms)});
                 return self_name + ":" + args;
@@ -131,6 +172,11 @@ int run(int argc, char** argv)
     auto gap = std::uniform_int_distribution<int>{120, 420};
     auto call_index = 0;
     for (int round = 1; round <= rounds; ++round) {
+        /*
+         * Shuffle once per round and then call peers sequentially. The
+         * per-process sequence remains single-threaded, while all containers
+         * run their own sequence concurrently.
+         */
         auto round_peers = peers;
         std::shuffle(round_peers.begin(), round_peers.end(), rng);
         std::cout << "ROUND " << self_name << " round=" << round << '\n';
@@ -142,11 +188,23 @@ int run(int argc, char** argv)
         }
     }
 
+    /*
+     * Keep serving briefly after finishing outgoing calls. This prevents a fast
+     * node from disappearing while a slower peer still has a final request for
+     * it in the current test run.
+     */
     std::cout << (ok ? "DONE " : "FAILED ") << self_name << '\n';
     std::this_thread::sleep_for(std::chrono::seconds{20});
     return ok ? 0 : 1;
 }
 
+/*
+ * Install logging safeguards around the test process.
+ *
+ * Unit-buffered streams make Docker log files useful even if the process is
+ * interrupted. The terminate handler records exceptions escaping background
+ * Fast DDS threads or destructors before exiting.
+ */
 int main(int argc, char** argv)
 {
     std::cout << std::unitbuf;
