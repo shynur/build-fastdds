@@ -14,7 +14,7 @@
 // 继承生成的默认实现 (其默认对每个操作抛 RemoteUnsupportedError), 覆盖我们支持的操作.
 struct CalculatorServerImpl : public ::calculator_example::CalculatorServerImplementation {
 
-    ::calculator_example::detail::Calculator_representation_limits_Out representation_limits(const ::eprosima::fastdds::dds::rpc::RpcRequest &info) override {
+    ::calculator_example::detail::Calculator_representation_limits_Out representation_limits(const ::eprosima::fastdds::dds::rpc::RpcRequest& info) override {
         static_cast<void>(info);
         auto limits = ::calculator_example::detail::Calculator_representation_limits_Out{};
         limits.min_value = std::numeric_limits<std::int32_t>::min();
@@ -22,7 +22,7 @@ struct CalculatorServerImpl : public ::calculator_example::CalculatorServerImple
         return limits;
     }
 
-    std::int32_t addition(const ::eprosima::fastdds::dds::rpc::RpcRequest &info, std::int32_t value1, std::int32_t value2) override {
+    std::int32_t addition(const ::eprosima::fastdds::dds::rpc::RpcRequest& info, const std::int32_t value1, const std::int32_t value2) override {
         static_cast<void>(info);
         const std::int32_t result = value1 + value2;
         const bool negative_1 = value1 < 0;
@@ -35,7 +35,7 @@ struct CalculatorServerImpl : public ::calculator_example::CalculatorServerImple
         return result;
     }
 
-    std::int32_t subtraction(const ::eprosima::fastdds::dds::rpc::RpcRequest &info, std::int32_t value1, std::int32_t value2) override {
+    std::int32_t subtraction(const ::eprosima::fastdds::dds::rpc::RpcRequest& info, const std::int32_t value1, const std::int32_t value2) override {
         static_cast<void>(info);
         const std::int32_t result = value1 - value2;
         const bool negative_1 = value1 < 0;

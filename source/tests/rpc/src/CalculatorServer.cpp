@@ -17,10 +17,11 @@
 #include "CalculatorServerImpl.hpp"
 #include "types/calculatorServer.hpp"
 
-class Server {
-public:
+using namespace std::literals;
 
-    explicit Server(const std::string &service_name) : service_name_(service_name) {}
+class Server {
+  public:
+    explicit Server(const std::string& service_name): service_name_(service_name) {}
 
     ~Server() {
         this->server_.reset();
@@ -65,10 +66,9 @@ public:
         this->server_->stop();
     }
 
-private:
-
+  private:
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_ = nullptr;
-    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
+    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
     std::string service_name_;
 };
 
@@ -76,7 +76,7 @@ private:
 // 由主线程执行, 避免在信号上下文里调用非异步信号安全的清理逻辑.
 std::atomic<bool> g_stop_requested{false};
 
-void signal_handler(int signum) {
+void signal_handler(const int signum) {
     static_cast<void>(signum);
     g_stop_requested.store(true);
 }
@@ -94,10 +94,9 @@ int main() {
     std::cout << "[Server] press Ctrl+C to stop." << std::endl;
 
     while (!g_stop_requested.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(100ms);
     }
 
     server->stop();
     thread.join();
-    return 0;
 }

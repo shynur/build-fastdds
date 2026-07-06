@@ -19,10 +19,11 @@
 #include "types/calculator.hpp"
 #include "types/calculatorClient.hpp"
 
-class Client {
-public:
+using namespace std::literals;
 
-    explicit Client(const std::string &service_name) : service_name_(service_name) {}
+class Client {
+  public:
+    explicit Client(const std::string& service_name): service_name_(service_name) {}
 
     ~Client() {
         this->client_.reset();
@@ -56,7 +57,7 @@ public:
     // 演示 out 参数: 取回 32 位整数的表示范围.
     void call_representation_limits() {
         auto future = this->client_->representation_limits();
-        if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+        if (future.wait_for(5s) != std::future_status::ready) {
             std::cerr << "[Client] representation_limits timed out" << std::endl;
             return;
         }
@@ -64,15 +65,15 @@ public:
             const auto limits = future.get();
             std::cout << "[Client] representation_limits => min=" << limits.min_value << ", max=" << limits.max_value << std::endl;
         }
-        catch (const ::eprosima::fastdds::dds::rpc::RpcException &e) {
+        catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
             std::cerr << "[Client] representation_limits RPC exception: " << e.what() << std::endl;
         }
     }
 
     // 演示 in 参数 + 返回值 (可能抛出 OverflowException).
-    void call_addition(std::int32_t x, std::int32_t y) {
+    void call_addition(const std::int32_t x, const std::int32_t y) {
         auto future = this->client_->addition(x, y);
-        if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+        if (future.wait_for(5s) != std::future_status::ready) {
             std::cerr << "[Client] addition timed out" << std::endl;
             return;
         }
@@ -80,14 +81,14 @@ public:
             const std::int32_t result = future.get();
             std::cout << "[Client] addition => " << x << " + " << y << " = " << result << std::endl;
         }
-        catch (const ::eprosima::fastdds::dds::rpc::RpcException &e) {
+        catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
             std::cout << "[Client] addition(" << x << ", " << y << ") raised exception: " << e.what() << std::endl;
         }
     }
 
-    void call_subtraction(std::int32_t x, std::int32_t y) {
+    void call_subtraction(const std::int32_t x, const std::int32_t y) {
         auto future = this->client_->subtraction(x, y);
-        if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+        if (future.wait_for(5s) != std::future_status::ready) {
             std::cerr << "[Client] subtraction timed out" << std::endl;
             return;
         }
@@ -95,15 +96,14 @@ public:
             const std::int32_t result = future.get();
             std::cout << "[Client] subtraction => " << x << " - " << y << " = " << result << std::endl;
         }
-        catch (const ::eprosima::fastdds::dds::rpc::RpcException &e) {
+        catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
             std::cout << "[Client] subtraction(" << x << ", " << y << ") raised exception: " << e.what() << std::endl;
         }
     }
 
-private:
-
+  private:
     std::shared_ptr<::calculator_example::Calculator> client_ = nullptr;
-    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
+    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
     std::string service_name_;
 };
 
@@ -112,7 +112,7 @@ int main() {
     client.init();
 
     // 等待与服务端完成端点匹配.
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(2s);
 
     // 依次演示: out 参数 / 正常运算 / 触发溢出异常.
     client.call_representation_limits();
@@ -121,5 +121,4 @@ int main() {
     client.call_addition(std::numeric_limits<std::int32_t>::max(), 1);
 
     std::cout << "[Client] done." << std::endl;
-    return 0;
 }

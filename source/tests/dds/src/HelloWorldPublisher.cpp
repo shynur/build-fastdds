@@ -16,9 +16,10 @@
 #include <fastdds/dds/publisher/Publisher.hpp>
 #include <fastdds/dds/topic/TypeSupport.hpp>
 
-class HelloWorldPublisher {
-public:
+using namespace std::literals;
 
+class HelloWorldPublisher {
+  public:
     HelloWorldPublisher() = default;
 
     ~HelloWorldPublisher() {
@@ -64,10 +65,10 @@ public:
         return true;
     }
 
-    void run(std::uint32_t samples) {
+    void run(const std::uint32_t samples) {
         // 等待至少 1 个匹配的 subscriber
         while (this->listener_.matched_ == 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(100ms);
         }
         std::cout << "[Publisher] " << this->listener_.matched_ << " subscriber(s) matched. Start publishing." << std::endl;
 
@@ -76,18 +77,17 @@ public:
             this->hello_.message("HelloWorld from publisher");
             this->writer_->write(&this->hello_);
             std::cout << "[Publisher] SENT sample: index=" << this->hello_.index() << " message='" << this->hello_.message() << "'" << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(500ms);
         }
         // 给 subscribers 一点时间收尾
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(500ms);
     }
 
     class PubListener : public ::eprosima::fastdds::dds::DataWriterListener {
-    public:
-
+      public:
         std::atomic<int> matched_{0};
 
-        void on_publication_matched(::eprosima::fastdds::dds::DataWriter *writer, const ::eprosima::fastdds::dds::PublicationMatchedStatus &info) override {
+        void on_publication_matched(::eprosima::fastdds::dds::DataWriter* writer, const ::eprosima::fastdds::dds::PublicationMatchedStatus& info) override {
             static_cast<void>(writer);
             if (info.current_count_change == 1) {
                 this->matched_ = info.current_count;
@@ -102,20 +102,19 @@ public:
 
     static std::atomic<bool> running_;
 
-private:
-
+  private:
     HelloWorld hello_;
-    ::eprosima::fastdds::dds::DomainParticipant *participant_ = nullptr;
-    ::eprosima::fastdds::dds::Publisher *publisher_ = nullptr;
-    ::eprosima::fastdds::dds::Topic *topic_ = nullptr;
-    ::eprosima::fastdds::dds::DataWriter *writer_ = nullptr;
-    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType{}};
+    ::eprosima::fastdds::dds::DomainParticipant* participant_ = nullptr;
+    ::eprosima::fastdds::dds::Publisher* publisher_ = nullptr;
+    ::eprosima::fastdds::dds::Topic* topic_ = nullptr;
+    ::eprosima::fastdds::dds::DataWriter* writer_ = nullptr;
+    ::eprosima::fastdds::dds::TypeSupport type_{new HelloWorldPubSubType};
     PubListener listener_;
 };
 
 std::atomic<bool> HelloWorldPublisher::running_{true};
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     std::uint32_t samples = 10;
     if (argc > 1) {
         samples = static_cast<std::uint32_t>(std::atoi(argv[1]));
@@ -130,5 +129,4 @@ int main(int argc, char **argv) {
     }
     pub.run(samples);
     std::cout << "[Publisher] done." << std::endl;
-    return 0;
 }
