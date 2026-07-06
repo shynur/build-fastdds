@@ -19,20 +19,16 @@ target_sources(calculator_gen
         src/types/calculatorPubSubTypes.cxx
         src/types/calculatorTypeObjectSupport.cxx
     PUBLIC
-        FILE_SET generated_headers TYPE HEADERS
-            BASE_DIRS src
-            FILES
-                src/types/calculator.hpp
-                src/types/calculator_details.hpp
-                src/types/calculatorClient.hpp
-                src/types/calculatorServer.hpp
-                src/types/calculatorServerImpl.hpp
-                src/types/calculatorPubSubTypes.hpp
-                src/types/calculatorCdrAux.hpp
-                src/types/calculatorTypeObjectSupport.hpp
-)
-target_include_directories(calculator_gen PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        FILE_SET HEADERS
+        BASE_DIRS types
+        FILES types/calculator.hpp
+              types/calculator_details.hpp
+              types/calculatorClient.hpp
+              types/calculatorServer.hpp
+              types/calculatorServerImpl.hpp
+              types/calculatorPubSubTypes.hpp
+              types/calculatorCdrAux.hpp
+              types/calculatorTypeObjectSupport.hpp
 )
 target_compile_features(calculator_gen PUBLIC cxx_std_17)
 target_link_libraries(calculator_gen PUBLIC fastdds fastcdr Threads::Threads)
