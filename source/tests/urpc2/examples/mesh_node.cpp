@@ -62,7 +62,7 @@ bool call_peer(
                       << " round=" << round
                       << " call=" << call_index
                       << " attempt=" << attempt << '\n';
-            const auto result = rpc.call(peer_name, "echo", payload, std::chrono::milliseconds{6000});
+            const auto result = rpc.call(peer_name, "echo", payload, 6000ms);
             if (result == expected) {
                 std::cout << "OK " << self_name << " -> " << peer_name
                           << " round=" << round
@@ -83,7 +83,7 @@ bool call_peer(
                       << " attempt=" << attempt << " error=unknown exception\n";
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds{1});
+        std::this_thread::sleep_for(1s);
     }
 
     std::cerr << "FAIL " << self_name << " -> " << peer_name
@@ -154,13 +154,13 @@ int run(int argc, char** argv)
                  * 请求顺序返回.
                  */
                 const auto delay_ms = 10 + (std::hash<std::string>{}(self_name + args) % 81);
-                std::this_thread::sleep_for(std::chrono::milliseconds{static_cast<int>(delay_ms)});
+                std::this_thread::sleep_for(std::chrono::milliseconds{int(delay_ms)});
                 return self_name + ":" + args;
             });
 
     std::cout << "READY " << self_name << " peers=" << peers.size()
               << " rounds=" << rounds << '\n';
-    std::this_thread::sleep_for(std::chrono::seconds{3});
+    std::this_thread::sleep_for(3s);
 
     auto ok = true;
     auto rng = std::mt19937{seed_for(self_name)};
@@ -187,7 +187,7 @@ int run(int argc, char** argv)
      * 当前测试运行中仍有最后一个请求发往它时提前消失.
      */
     std::cout << (ok ? "DONE " : "FAILED ") << self_name << '\n';
-    std::this_thread::sleep_for(std::chrono::seconds{20});
+    std::this_thread::sleep_for(20s);
     return ok ? 0 : 1;
 }
 

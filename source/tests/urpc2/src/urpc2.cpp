@@ -106,21 +106,25 @@ class urpc2::Urpc2::Impl {
   public:
     explicit Impl(const std::string& name)
     : name_{name},
-      server_{[this] {
-          const auto router = std::make_shared<Router>(*this);
-          const auto server = gen::create_ProcessorServer(
-              *this->participant_,
-              this->name_.c_str(),
-              ::eprosima::fastdds::dds::ReplierQos{},
-              0,
-              router
-          );
-          if (!server) {
-              throw std::runtime_error{"Failed to create Urpc2 server"};
-          }
-          return server;
-      }()},
-      server_thread_{[this]{this->server_->run();}} {
+      server_{
+          [this] {
+              const auto router = std::make_shared<Router>(*this);
+              const auto server = gen::create_ProcessorServer(
+                  *this->participant_,
+                  this->name_.c_str(),
+                  ::eprosima::fastdds::dds::ReplierQos{},
+                  0,
+                  router
+              );
+              if (!server) {
+                  throw std::runtime_error{"Failed to create Urpc2 server"};
+              }
+              return server;
+          }()
+      },
+      server_thread_{
+          [this] { this->server_->run(); }
+      } {
         std::this_thread::sleep_for(1s);
     }
 
