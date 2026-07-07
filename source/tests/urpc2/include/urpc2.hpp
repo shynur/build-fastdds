@@ -5,8 +5,9 @@
 #include <memory>
 #include <string>
 
+using namespace std::literals;
+
 namespace urpc2 {
-    using namespace std::literals;
     class Urpc2;
 }
 
