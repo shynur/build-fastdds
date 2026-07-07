@@ -1,5 +1,4 @@
-#ifndef URPC2_HPP
-#define URPC2_HPP
+#pragma once
 
 #include <chrono>
 #include <functional>
@@ -123,5 +122,3 @@ class Urpc2 {
 };
 
 }  // namespace urpc2
-
-#endif  // URPC2_HPP
