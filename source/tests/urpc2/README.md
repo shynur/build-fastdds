@@ -74,6 +74,7 @@ make -C /tmp/urpc2-build -j2
 - `urpc2_rbk`: `urpc2` 之上的类型化便捷封装库.
 - `urpc2_simple`: 单进程冒烟示例.
 - `urpc2_mesh_node`: 用于多进程测试的单进程网格节点.
+- `urpc2_mesh_node_rbk`: 同上, 但改用 `urpc2_rbk` 的类型化 API.
 
 ## 测试
 
@@ -168,6 +169,12 @@ DONE node1
 - `RETRY`, `FAIL`, `ERROR`, `TERMINATE`: 0
 
 日志会写入每个容器内的 `/work/mesh-logs/*.log`.
+
+`urpc2_mesh_node_rbk` 是同一网格测试的类型化版本: 命令行, 协议轮次和日志标记
+与 `urpc2_mesh_node` 完全相同, 因此上述预期计数同样适用.  区别在于它的 `echo`
+经由 `urpc2_rbk` 收发常规类型 (以 `string, string, int, int` 四个参数入, 以
+`tuple<string, int, int, string>` 出), 从而在真实并发下检验类型化参数与多返回值
+的 marshalling 正确性.  可原样替换二进制名运行.
 
 ## 生成文件
 

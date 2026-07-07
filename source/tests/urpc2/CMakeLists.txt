@@ -93,3 +93,6 @@ target_link_libraries(urpc2_simple urpc2)
 
 add_executable(urpc2_mesh_node examples/mesh_node.cpp)
 target_link_libraries(urpc2_mesh_node urpc2)
+
+add_executable(urpc2_mesh_node_rbk examples/mesh_node_rbk.cpp)
+target_link_libraries(urpc2_mesh_node_rbk urpc2_rbk)
