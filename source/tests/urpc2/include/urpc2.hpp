@@ -10,13 +10,13 @@ namespace urpc2 {
 /**
  * @brief 应用程序直接使用的最小 RPC-over-DDS 端点.
  *
- * 每个 Urpc2 对象拥有一个 Fast DDS RPC 服务. 构造函数名称会用作 DDS RPC
- * 服务名, 因此它在 DDS 域内必须唯一. 处理器名称的作用域是拥有它的 Urpc2
- * 实例: 两个不同实例都可以注册名为 "add" 的处理器, 调用方通过向 call()
+ * 每个 Urpc2 对象拥有一个 Fast DDS RPC 服务.  构造函数名称会用作 DDS RPC
+ * 服务名, 因此它在 DDS 域内必须唯一.  处理器名称的作用域是拥有它的 Urpc2
+ * 实例: 两个不同实例都可以注册名为 e.g. "add" 的处理器, 调用方通过向 call()
  * 传入接收方实例名称来消除歧义.
  *
- * 框架将请求体和响应体视为不透明字符串. 第一版预期约定是 JSON 文本, 但
- * Urpc2 不会解析或校验该载荷.
+ * 框架将请求体和响应体视为不透明字符串.  通常约定是 JSON 文本, 但 Urpc2
+ * 不会解析或校验该载荷.
  */
 class Urpc2 {
   public:
@@ -44,11 +44,6 @@ class Urpc2 {
      * @brief 停止所拥有的 RPC 服务器并释放 Fast DDS 资源.
      */
     ~Urpc2();
-
-    Urpc2(const Urpc2&) = delete;
-    Urpc2& operator=(const Urpc2&) = delete;
-    Urpc2(Urpc2&&) = delete;
-    Urpc2& operator=(Urpc2&&) = delete;
 
     /**
      * @brief 返回此端点的唯一实例名称.
