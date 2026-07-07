@@ -66,7 +66,8 @@ Ubuntu 18.04 容器, 并在容器内完成配置, 构建和运行.
 
 环境准备步骤:
 1. 创建 Ubuntu 18.04 容器.
-2. 在容器内安装基础构建工具和 `clang++-6.0`.
+2. 在容器内安装基础构建工具, `clang++-6` 和 `g++-7`.
+   让 `clang++-6` 使用 `g++-7` 附带的 libstdc++.
 3. 按仓库其它脚本使用的方式安装 CMake: 从 Kitware 官方 release 下载
    CMake 3.31.12 自解压安装器, 使用 `--skip-license --prefix=/usr/local`
    安装到 `/usr/local`.
