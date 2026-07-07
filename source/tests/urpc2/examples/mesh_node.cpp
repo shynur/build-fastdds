@@ -17,7 +17,7 @@ namespace {
 /*
  * 打印单个网格节点进程接受的命令行.
  *
- * 进程名称就是 Urpc2 端点名称. 剩余的非选项参数是所有已知节点名称; 进程会
+ * 进程名称就是 Urpc2 端点名称.  剩余的非选项参数是所有已知节点名称; 进程会
  * 过滤掉自己的名称.
  */
 std::string usage(const char* const program)
@@ -28,7 +28,7 @@ std::string usage(const char* const program)
 /*
  * 构建确定性的伪随机种子.
  *
- * 测试需要打乱调用顺序, 但不能让失败变得不可复现. 使用节点名称作为种子,
+ * 测试需要打乱调用顺序, 但不能让失败变得不可复现.  使用节点名称作为种子,
  * 可以让每个节点获得不同但稳定的对等节点顺序序列.
  */
 unsigned seed_for(const std::string& text)
@@ -40,7 +40,7 @@ unsigned seed_for(const std::string& text)
  * 执行一次带有限重试的同步 RPC.
  *
  * 进入 Urpc2::call() 前会写入一行 CALL, 因此卡住的测试日志能指出正在测试的
- * 精确边. 成功响应必须回显接收方名称和原始载荷, 以证明是目标对等节点在
+ * 精确边.  成功响应必须回显接收方名称和原始载荷, 以证明是目标对等节点在
  * 应答, 而不是另一个不同名称的进程.
  */
 bool call_peer(
@@ -95,7 +95,7 @@ bool call_peer(
 /*
  * 解析网格选项.
  *
- * 第一版只需要 --rounds=N. 保持解析器小巧, 便于将示例复制到临时容器测试中.
+ * 第一版只需要 --rounds=N.  保持解析器小巧, 便于将示例复制到临时容器测试中.
  */
 int parse_rounds(int argc, char** argv)
 {
@@ -121,8 +121,8 @@ int parse_rounds(int argc, char** argv)
  * 运行一个网格节点.
  *
  * 每个进程都会注册相同的 "echo" 处理器, 等待对等节点启动, 然后执行多轮
- * 单线程出站调用. 每轮都会打乱对等节点列表, 并在调用之间插入较小的随机
- * 间隔. 因此, 六个独立运行的进程无需在进程内启动多个客户端工作线程, 也能
+ * 单线程出站调用.  每轮都会打乱对等节点列表, 并在调用之间插入较小的随机
+ * 间隔.  因此, 六个独立运行的进程无需在进程内启动多个客户端工作线程, 也能
  * 自然地产生交错且乱序的 RPC 流.
  */
 int run(int argc, char** argv)
@@ -168,7 +168,7 @@ int run(int argc, char** argv)
     auto call_index = 0;
     for (int round = 1; round <= rounds; ++round) {
         /*
-         * 每轮打乱一次, 然后顺序调用对等节点. 每个进程内的序列仍然是单线程
+         * 每轮打乱一次, 然后顺序调用对等节点.  每个进程内的序列仍然是单线程
          * 的, 而所有容器会并发运行各自的序列.
          */
         auto round_peers = peers;
@@ -183,7 +183,7 @@ int run(int argc, char** argv)
     }
 
     /*
-     * 完成出站调用后继续短暂提供服务. 这可以防止较快节点在较慢对等节点的
+     * 完成出站调用后继续短暂提供服务.  这可以防止较快节点在较慢对等节点的
      * 当前测试运行中仍有最后一个请求发往它时提前消失.
      */
     std::cout << (ok ? "DONE " : "FAILED ") << self_name << '\n';
@@ -194,7 +194,7 @@ int run(int argc, char** argv)
 /*
  * 为测试进程安装日志保护.
  *
- * 单元缓冲流让进程即使被中断, Docker 日志文件也仍然有用. terminate 处理器会
+ * 单元缓冲流让进程即使被中断, Docker 日志文件也仍然有用.  terminate 处理器会
  * 在退出前记录从后台 Fast DDS 线程或析构函数逃逸的异常.
  */
 int main(int argc, char** argv)
