@@ -35,6 +35,8 @@
 
 namespace urpc2 {
 
+namespace gen {
+
 struct ProcessorServer_IServerImplementation
 {
     virtual ~ProcessorServer_IServerImplementation() = default;
@@ -78,6 +80,9 @@ extern eProsima_user_DllExport std::shared_ptr<eprosima::fastdds::dds::rpc::RpcS
         const eprosima::fastdds::dds::ReplierQos& qos,
         std::shared_ptr<eprosima::fastdds::dds::rpc::RpcServerSchedulingStrategy> scheduler,
         std::shared_ptr<ProcessorServer_IServerImplementation> implementation);
+
+
+} // namespace gen
 
 
 } // namespace urpc2

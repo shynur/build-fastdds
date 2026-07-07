@@ -35,6 +35,7 @@ using InstanceHandle_t = eprosima::fastdds::rtps::InstanceHandle_t;
 using DataRepresentationId_t = eprosima::fastdds::dds::DataRepresentationId_t;
 
 namespace urpc2 {
+namespace gen {
 // { Processor interface
 
 class Processor_RequestPubSubType : public eprosima::fastdds::dds::TopicDataType
@@ -46,7 +47,7 @@ public:
     // Constructor
     Processor_RequestPubSubType()
     {
-        set_name("urpc2::Processor_Request");
+        set_name("urpc2::gen::Processor_Request");
         uint32_t type_size = 536UL;
         type_size += static_cast<uint32_t>(eprosima::fastcdr::Cdr::alignment(type_size, 4)); /* possible submessage alignment */
         max_serialized_type_size = type_size + 4; /*encapsulation*/
@@ -194,7 +195,7 @@ public:
     // Constructor
     Processor_ReplyPubSubType()
     {
-        set_name("urpc2::Processor_Reply");
+        set_name("urpc2::gen::Processor_Reply");
         uint32_t type_size = 536UL;
         type_size += static_cast<uint32_t>(eprosima::fastcdr::Cdr::alignment(type_size, 4)); /* possible submessage alignment */
         max_serialized_type_size = type_size + 4; /*encapsulation*/
@@ -344,6 +345,8 @@ eprosima::fastdds::dds::rpc::ServiceTypeSupport create_Processor_service_type_su
 }
 
 // }  // Processor interface
+
+} // namespace gen
 
 } // namespace urpc2
 

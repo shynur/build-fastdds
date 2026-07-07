@@ -1,6 +1,7 @@
 #include <urpc2.hpp>
 
 #include <cassert>
+#include <chrono>
 #include <iostream>
 #include <string>
 
@@ -40,8 +41,8 @@ int main()
      * 调用时先给出接收端点名称, 再给出接收端点本地的处理器名称.  由于端点
      * 名称唯一, 同一个处理器名称可以同时存在于两个端点上而不会产生歧义.
      */
-    const auto sub_result = bob.call("alice", "sub", "[5,3]");
-    const auto add_result = alice.call("bob", "add", "[5,3]");
+    const auto sub_result = bob.call("alice", "sub", "[5,3]", std::chrono::milliseconds{5000});
+    const auto add_result = alice.call("bob", "add", "[5,3]", std::chrono::milliseconds{5000});
 
     assert(sub_result == "2");
     assert(add_result == "8");

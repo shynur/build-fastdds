@@ -29,6 +29,7 @@
 #include "processor.hpp"
 
 namespace urpc2 {
+namespace gen {
 namespace detail {
 
 //{ Processor interface
@@ -49,7 +50,7 @@ struct Processor_router_Out
 
 struct Processor_router_Result
 {
-    eprosima::fastcdr::optional<urpc2::detail::Processor_router_Out> result;
+    eprosima::fastcdr::optional<urpc2::gen::detail::Processor_router_Out> result;
 };
 
 //}  // router
@@ -59,12 +60,12 @@ struct Processor_router_Result
 
 struct Processor_Request
 {
-    eprosima::fastcdr::optional<urpc2::detail::Processor_router_In> router;   
+    eprosima::fastcdr::optional<urpc2::gen::detail::Processor_router_In> router;   
 };
 
 struct Processor_Reply
 {
-    eprosima::fastcdr::optional<urpc2::detail::Processor_router_Result> router; 
+    eprosima::fastcdr::optional<urpc2::gen::detail::Processor_router_Result> router; 
     eprosima::fastcdr::optional<eprosima::fastdds::dds::rpc::RemoteExceptionCode_t> remoteEx;
 };
 
@@ -73,6 +74,7 @@ struct Processor_Reply
 //}  // Processor interface
 
 } // namespace detail
+}  // namespace gen
 }  // namespace urpc2
 
 #endif //FAST_DDS_GENERATED__PROCESSOR_DETAILS_HPP

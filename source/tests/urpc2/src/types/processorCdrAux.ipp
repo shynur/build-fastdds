@@ -34,10 +34,10 @@ using namespace eprosima::fastcdr::exception;
 namespace eprosima {
 namespace fastcdr {
 
-//{ urpc2::Processor interface
+//{ urpc2::gen::Processor interface
 
 //{ router
-// Serialization methods for urpc2::detail::Processor_router_In
+// Serialization methods for urpc2::gen::detail::Processor_router_In
 /*
 struct Processor_router_In
 {
@@ -48,10 +48,10 @@ struct Processor_router_In
 template<>
 eProsima_user_DllExport size_t calculate_serialized_size(
         eprosima::fastcdr::CdrSizeCalculator& calculator,
-        const ::urpc2::detail::Processor_router_In& data,
+        const ::urpc2::gen::detail::Processor_router_In& data,
         size_t& current_alignment)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     static_cast<void>(data);
 
@@ -78,9 +78,9 @@ eProsima_user_DllExport size_t calculate_serialized_size(
 template<>
 eProsima_user_DllExport void serialize(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_In& data)
+        const ::urpc2::gen::detail::Processor_router_In& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     eprosima::fastcdr::Cdr::state current_state(scdr);
     scdr.begin_serialize_type(current_state,
@@ -98,9 +98,9 @@ eProsima_user_DllExport void serialize(
 template<>
 eProsima_user_DllExport void deserialize(
         eprosima::fastcdr::Cdr& cdr,
-        ::urpc2::detail::Processor_router_In& data)
+        ::urpc2::gen::detail::Processor_router_In& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     cdr.deserialize_type(eprosima::fastcdr::CdrVersion::XCDRv2 == cdr.get_cdr_version() ?
             eprosima::fastcdr::EncodingAlgorithmFlag::PLAIN_CDR2 :
@@ -128,7 +128,7 @@ eProsima_user_DllExport void deserialize(
 
 void serialize_key(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_In& data)
+        const ::urpc2::gen::detail::Processor_router_In& data)
 {
     static_cast<void>(scdr);
     static_cast<void>(data);
@@ -136,7 +136,7 @@ void serialize_key(
 
   
 
-// Serialization methods for urpc2::detail::Processor_router_Out
+// Serialization methods for urpc2::gen::detail::Processor_router_Out
 /*
 struct Processor_router_Out
 {
@@ -146,10 +146,10 @@ struct Processor_router_Out
 template<>
 eProsima_user_DllExport size_t calculate_serialized_size(
         eprosima::fastcdr::CdrSizeCalculator& calculator,
-        const ::urpc2::detail::Processor_router_Out& data,
+        const ::urpc2::gen::detail::Processor_router_Out& data,
         size_t& current_alignment)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     static_cast<void>(data);
 
@@ -173,9 +173,9 @@ eProsima_user_DllExport size_t calculate_serialized_size(
 template<>
 eProsima_user_DllExport void serialize(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_Out& data)
+        const ::urpc2::gen::detail::Processor_router_Out& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     eprosima::fastcdr::Cdr::state current_state(scdr);
     scdr.begin_serialize_type(current_state,
@@ -192,9 +192,9 @@ eProsima_user_DllExport void serialize(
 template<>
 eProsima_user_DllExport void deserialize(
         eprosima::fastcdr::Cdr& cdr,
-        ::urpc2::detail::Processor_router_Out& data)
+        ::urpc2::gen::detail::Processor_router_Out& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     cdr.deserialize_type(eprosima::fastcdr::CdrVersion::XCDRv2 == cdr.get_cdr_version() ?
             eprosima::fastcdr::EncodingAlgorithmFlag::PLAIN_CDR2 :
@@ -218,13 +218,13 @@ eProsima_user_DllExport void deserialize(
 
 void serialize_key(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_Out& data)
+        const ::urpc2::gen::detail::Processor_router_Out& data)
 {
     static_cast<void>(scdr);
     static_cast<void>(data);
 }
 
-// Serialization methods for urpc2::detail::Processor_router_Result
+// Serialization methods for urpc2::gen::detail::Processor_router_Result
 /*
 struct Processor_router_Result
 {
@@ -234,10 +234,10 @@ struct Processor_router_Result
 template<>
 eProsima_user_DllExport size_t calculate_serialized_size(
         eprosima::fastcdr::CdrSizeCalculator& calculator,
-        const ::urpc2::detail::Processor_router_Result& data,
+        const ::urpc2::gen::detail::Processor_router_Result& data,
         size_t& current_alignment)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     static_cast<void>(data);
 
@@ -261,9 +261,9 @@ eProsima_user_DllExport size_t calculate_serialized_size(
 template<>
 eProsima_user_DllExport void serialize(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_Result& data)
+        const ::urpc2::gen::detail::Processor_router_Result& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     eprosima::fastcdr::Cdr::state current_state(scdr);
     scdr.begin_serialize_type(current_state,
@@ -280,9 +280,9 @@ eProsima_user_DllExport void serialize(
 template<>
 eProsima_user_DllExport void deserialize(
         eprosima::fastcdr::Cdr& cdr,
-        ::urpc2::detail::Processor_router_Result& data)
+        ::urpc2::gen::detail::Processor_router_Result& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     cdr.deserialize_type(eprosima::fastcdr::CdrVersion::XCDRv2 == cdr.get_cdr_version() ?
             eprosima::fastcdr::EncodingAlgorithmFlag::PL_CDR2 :
@@ -306,7 +306,7 @@ eProsima_user_DllExport void deserialize(
 
 void serialize_key(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_router_Result& data)
+        const ::urpc2::gen::detail::Processor_router_Result& data)
 {
     static_cast<void>(scdr);
     static_cast<void>(data);
@@ -317,7 +317,7 @@ void serialize_key(
 
 //{ top level
 
-// Serialization methods for urpc2::detail::Processor_Request
+// Serialization methods for urpc2::gen::detail::Processor_Request
 /*
 struct Processor_Request
 {
@@ -327,10 +327,10 @@ struct Processor_Request
 template<>
 eProsima_user_DllExport size_t calculate_serialized_size(
         eprosima::fastcdr::CdrSizeCalculator& calculator,
-        const ::urpc2::detail::Processor_Request& data,
+        const ::urpc2::gen::detail::Processor_Request& data,
         size_t& current_alignment)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     static_cast<void>(data);
 
@@ -354,9 +354,9 @@ eProsima_user_DllExport size_t calculate_serialized_size(
 template<>
 eProsima_user_DllExport void serialize(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_Request& data)
+        const ::urpc2::gen::detail::Processor_Request& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     eprosima::fastcdr::Cdr::state current_state(scdr);
     scdr.begin_serialize_type(current_state,
@@ -373,9 +373,9 @@ eProsima_user_DllExport void serialize(
 template<>
 eProsima_user_DllExport void deserialize(
         eprosima::fastcdr::Cdr& cdr,
-        ::urpc2::detail::Processor_Request& data)
+        ::urpc2::gen::detail::Processor_Request& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     cdr.deserialize_type(eprosima::fastcdr::CdrVersion::XCDRv2 == cdr.get_cdr_version() ?
             eprosima::fastcdr::EncodingAlgorithmFlag::PL_CDR2 :
@@ -399,13 +399,13 @@ eProsima_user_DllExport void deserialize(
 
 void serialize_key(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_Request& data)
+        const ::urpc2::gen::detail::Processor_Request& data)
 {
     static_cast<void>(scdr);
     static_cast<void>(data);
 }
 
-// Serialization methods for urpc2::detail::Processor_Reply
+// Serialization methods for urpc2::gen::detail::Processor_Reply
 /*
 struct Processor_Reply
 {
@@ -416,10 +416,10 @@ struct Processor_Reply
 template<>
 eProsima_user_DllExport size_t calculate_serialized_size(
         eprosima::fastcdr::CdrSizeCalculator& calculator,
-        const ::urpc2::detail::Processor_Reply& data,
+        const ::urpc2::gen::detail::Processor_Reply& data,
         size_t& current_alignment)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     static_cast<void>(data);
 
@@ -446,9 +446,9 @@ eProsima_user_DllExport size_t calculate_serialized_size(
 template<>
 eProsima_user_DllExport void serialize(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_Reply& data)
+        const ::urpc2::gen::detail::Processor_Reply& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     eprosima::fastcdr::Cdr::state current_state(scdr);
     scdr.begin_serialize_type(current_state,
@@ -466,9 +466,9 @@ eProsima_user_DllExport void serialize(
 template<>
 eProsima_user_DllExport void deserialize(
         eprosima::fastcdr::Cdr& cdr,
-        ::urpc2::detail::Processor_Reply& data)
+        ::urpc2::gen::detail::Processor_Reply& data)
 {
-    using namespace urpc2::detail;
+    using namespace urpc2::gen::detail;
 
     cdr.deserialize_type(eprosima::fastcdr::CdrVersion::XCDRv2 == cdr.get_cdr_version() ?
             eprosima::fastcdr::EncodingAlgorithmFlag::PL_CDR2 :
@@ -496,7 +496,7 @@ eProsima_user_DllExport void deserialize(
 
 void serialize_key(
         eprosima::fastcdr::Cdr& scdr,
-        const ::urpc2::detail::Processor_Reply& data)
+        const ::urpc2::gen::detail::Processor_Reply& data)
 {
     static_cast<void>(scdr);
     static_cast<void>(data);
@@ -504,7 +504,7 @@ void serialize_key(
 
 //}  // top level
 
-//}  // urpc2::Processor interface
+//}  // urpc2::gen::Processor interface
 
 
 } // namespace fastcdr

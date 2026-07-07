@@ -51,6 +51,8 @@
 
 namespace urpc2 {
 
+namespace gen {
+
 //{ interface Processor
 
 namespace detail {
@@ -76,14 +78,14 @@ public:
     {
         // Register the service type support
         auto service_type = create_Processor_service_type_support();
-        auto ret = service_type.register_service_type(&participant_, "urpc2::Processor");
+        auto ret = service_type.register_service_type(&participant_, "urpc2::gen::Processor");
         if (ret != fdds::RETCODE_OK)
         {
             throw std::runtime_error("Error registering service type");
         }
 
         // Create the service
-        service_ = participant_.create_service(service_name, "urpc2::Processor");
+        service_ = participant_.create_service(service_name, "urpc2::gen::Processor");
         if (nullptr == service_)
         {
             throw std::runtime_error("Error creating service");
@@ -342,7 +344,7 @@ public:
 
         // Create and send the request
         RequestType request;
-        request.router = urpc2::detail::Processor_router_In{};
+        request.router = urpc2::gen::detail::Processor_router_In{};
         request.router->handler_name = handler_name;
         request.router->args = args;
 
@@ -413,6 +415,9 @@ std::shared_ptr<Processor> create_ProcessorClient(
 }
 
 //} interface ProcessorClient
+
+
+} // namespace gen
 
 
 } // namespace urpc2

@@ -38,6 +38,7 @@
 #ifndef DOXYGEN_SHOULD_SKIP_THIS_PUBLIC
 
 namespace urpc2 {
+namespace gen {
 /**
  * @brief Register Processor_Request related TypeIdentifier.
  *        Fully-descriptive TypeIdentifiers are directly registered.
@@ -64,6 +65,8 @@ eProsima_user_DllExport void register_Processor_Request_type_identifier(
 eProsima_user_DllExport void register_Processor_Reply_type_identifier(
         eprosima::fastdds::dds::xtypes::TypeIdentifierPair& type_ids);
 
+
+} // namespace gen
 
 } // namespace urpc2
 

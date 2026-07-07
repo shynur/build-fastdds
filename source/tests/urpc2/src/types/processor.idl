@@ -1,5 +1,7 @@
 module urpc2 {
-    interface Processor {
-        string router(in string handler_name, in string args);
+    module gen {
+        interface Processor {
+            string router(in string handler_name, in string args);
+        };
     };
 };

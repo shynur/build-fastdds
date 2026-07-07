@@ -40,6 +40,7 @@
 using namespace eprosima::fastdds::dds::xtypes;
 
 namespace urpc2 {
+namespace gen {
 
 
 namespace detail {
@@ -53,12 +54,12 @@ void register_Processor_router_In_type_identifier(
     ReturnCode_t return_code_Processor_router_In {eprosima::fastdds::dds::RETCODE_OK};
     return_code_Processor_router_In =
         eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-        "urpc2::detail::Processor_router_In", type_ids_Processor_router_In);
+        "urpc2::gen::detail::Processor_router_In", type_ids_Processor_router_In);
     if (eprosima::fastdds::dds::RETCODE_OK != return_code_Processor_router_In)
     {
         StructTypeFlag struct_flags_Processor_router_In = TypeObjectUtils::build_struct_type_flag(eprosima::fastdds::dds::xtypes::ExtensibilityKind::FINAL,
                 false, false);
-        QualifiedTypeName type_name_Processor_router_In = "urpc2::detail::Processor_router_In";
+        QualifiedTypeName type_name_Processor_router_In = "urpc2::gen::detail::Processor_router_In";
         eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_Processor_router_In;
         eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_Processor_router_In;
         CompleteTypeDetail detail_Processor_router_In = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_Processor_router_In, ann_custom_Processor_router_In, type_name_Processor_router_In.to_string());
@@ -146,7 +147,7 @@ void register_Processor_router_In_type_identifier(
                 TypeObjectUtils::build_and_register_struct_type_object(struct_type_Processor_router_In, type_name_Processor_router_In.to_string(), type_ids_Processor_router_In))
         {
             EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                    "urpc2::detail::Processor_router_In already registered in TypeObjectRegistry for a different type.");
+                    "urpc2::gen::detail::Processor_router_In already registered in TypeObjectRegistry for a different type.");
         }
     }
 }
@@ -161,12 +162,12 @@ void register_Processor_router_Out_type_identifier(
     ReturnCode_t return_code_Processor_router_Out {eprosima::fastdds::dds::RETCODE_OK};
     return_code_Processor_router_Out =
         eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-        "urpc2::detail::Processor_router_Out", type_ids_Processor_router_Out);
+        "urpc2::gen::detail::Processor_router_Out", type_ids_Processor_router_Out);
     if (eprosima::fastdds::dds::RETCODE_OK != return_code_Processor_router_Out)
     {
         StructTypeFlag struct_flags_Processor_router_Out = TypeObjectUtils::build_struct_type_flag(eprosima::fastdds::dds::xtypes::ExtensibilityKind::FINAL,
                 false, false);
-        QualifiedTypeName type_name_Processor_router_Out = "urpc2::detail::Processor_router_Out";
+        QualifiedTypeName type_name_Processor_router_Out = "urpc2::gen::detail::Processor_router_Out";
         eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_Processor_router_Out;
         eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_Processor_router_Out;
         CompleteTypeDetail detail_Processor_router_Out = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_Processor_router_Out, ann_custom_Processor_router_Out, type_name_Processor_router_Out.to_string());
@@ -216,7 +217,7 @@ void register_Processor_router_Out_type_identifier(
                 TypeObjectUtils::build_and_register_struct_type_object(struct_type_Processor_router_Out, type_name_Processor_router_Out.to_string(), type_ids_Processor_router_Out))
         {
             EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                    "urpc2::detail::Processor_router_Out already registered in TypeObjectRegistry for a different type.");
+                    "urpc2::gen::detail::Processor_router_Out already registered in TypeObjectRegistry for a different type.");
         }
     }
 }
@@ -229,12 +230,12 @@ void register_Processor_router_Result_type_identifier(
     ReturnCode_t return_code_Processor_router_Result {eprosima::fastdds::dds::RETCODE_OK};
     return_code_Processor_router_Result =
         eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-        "urpc2::detail::Processor_router_Result", type_ids_Processor_router_Result);
+        "urpc2::gen::detail::Processor_router_Result", type_ids_Processor_router_Result);
     if (eprosima::fastdds::dds::RETCODE_OK != return_code_Processor_router_Result)
     {
         StructTypeFlag struct_flags_Processor_router_Result = TypeObjectUtils::build_struct_type_flag(eprosima::fastdds::dds::xtypes::ExtensibilityKind::MUTABLE,
                 false, false);
-        QualifiedTypeName type_name_Processor_router_Result = "urpc2::detail::Processor_router_Result";
+        QualifiedTypeName type_name_Processor_router_Result = "urpc2::gen::detail::Processor_router_Result";
         eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_Processor_router_Result;
         eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_Processor_router_Result;
         CompleteTypeDetail detail_Processor_router_Result = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_Processor_router_Result, ann_custom_Processor_router_Result, type_name_Processor_router_Result.to_string());
@@ -246,11 +247,11 @@ void register_Processor_router_Result_type_identifier(
             ReturnCode_t return_code_result {eprosima::fastdds::dds::RETCODE_OK};
             return_code_result =
                 eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-                "urpc2::detail::Processor_router_Out", type_ids_result);
+                "urpc2::gen::detail::Processor_router_Out", type_ids_result);
 
             if (eprosima::fastdds::dds::RETCODE_OK != return_code_result)
             {
-                ::urpc2::detail::register_Processor_router_Out_type_identifier(type_ids_result);
+                ::urpc2::gen::detail::register_Processor_router_Out_type_identifier(type_ids_result);
             }
             StructMemberFlag member_flags_result = TypeObjectUtils::build_struct_member_flag(eprosima::fastdds::dds::xtypes::TryConstructFailAction::DISCARD,
                     true, false, false, false);
@@ -289,7 +290,7 @@ void register_Processor_router_Result_type_identifier(
                 TypeObjectUtils::build_and_register_struct_type_object(struct_type_Processor_router_Result, type_name_Processor_router_Result.to_string(), type_ids_Processor_router_Result))
         {
             EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                    "urpc2::detail::Processor_router_Result already registered in TypeObjectRegistry for a different type.");
+                    "urpc2::gen::detail::Processor_router_Result already registered in TypeObjectRegistry for a different type.");
         }
     }
 }
@@ -307,12 +308,12 @@ void register_Processor_Request_type_identifier(
     ReturnCode_t return_code_Processor_Request {eprosima::fastdds::dds::RETCODE_OK};
     return_code_Processor_Request =
         eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-        "urpc2::detail::Processor_Request", type_ids_Processor_Request);
+        "urpc2::gen::detail::Processor_Request", type_ids_Processor_Request);
     if (eprosima::fastdds::dds::RETCODE_OK != return_code_Processor_Request)
     {
         StructTypeFlag struct_flags_Processor_Request = TypeObjectUtils::build_struct_type_flag(eprosima::fastdds::dds::xtypes::ExtensibilityKind::MUTABLE,
                 false, false);
-        QualifiedTypeName type_name_Processor_Request = "urpc2::detail::Processor_Request";
+        QualifiedTypeName type_name_Processor_Request = "urpc2::gen::detail::Processor_Request";
         eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_Processor_Request;
         eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_Processor_Request;
         CompleteTypeDetail detail_Processor_Request = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_Processor_Request, ann_custom_Processor_Request, type_name_Processor_Request.to_string());
@@ -324,11 +325,11 @@ void register_Processor_Request_type_identifier(
             ReturnCode_t return_code_router {eprosima::fastdds::dds::RETCODE_OK};
             return_code_router =
                 eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-                "urpc2::detail::Processor_router_In", type_ids_router);
+                "urpc2::gen::detail::Processor_router_In", type_ids_router);
 
             if (eprosima::fastdds::dds::RETCODE_OK != return_code_router)
             {
-                ::urpc2::detail::register_Processor_router_In_type_identifier(type_ids_router);
+                ::urpc2::gen::detail::register_Processor_router_In_type_identifier(type_ids_router);
             }
             StructMemberFlag member_flags_router = TypeObjectUtils::build_struct_member_flag(eprosima::fastdds::dds::xtypes::TryConstructFailAction::DISCARD,
                     true, false, false, false);
@@ -367,7 +368,7 @@ void register_Processor_Request_type_identifier(
                 TypeObjectUtils::build_and_register_struct_type_object(struct_type_Processor_Request, type_name_Processor_Request.to_string(), type_ids_Processor_Request))
         {
             EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                    "urpc2::detail::Processor_Request already registered in TypeObjectRegistry for a different type.");
+                    "urpc2::gen::detail::Processor_Request already registered in TypeObjectRegistry for a different type.");
         }
     }
 }
@@ -379,12 +380,12 @@ void register_Processor_Reply_type_identifier(
     ReturnCode_t return_code_Processor_Reply {eprosima::fastdds::dds::RETCODE_OK};
     return_code_Processor_Reply =
         eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-        "urpc2::detail::Processor_Reply", type_ids_Processor_Reply);
+        "urpc2::gen::detail::Processor_Reply", type_ids_Processor_Reply);
     if (eprosima::fastdds::dds::RETCODE_OK != return_code_Processor_Reply)
     {
         StructTypeFlag struct_flags_Processor_Reply = TypeObjectUtils::build_struct_type_flag(eprosima::fastdds::dds::xtypes::ExtensibilityKind::MUTABLE,
                 false, false);
-        QualifiedTypeName type_name_Processor_Reply = "urpc2::detail::Processor_Reply";
+        QualifiedTypeName type_name_Processor_Reply = "urpc2::gen::detail::Processor_Reply";
         eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_Processor_Reply;
         eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_Processor_Reply;
         CompleteTypeDetail detail_Processor_Reply = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_Processor_Reply, ann_custom_Processor_Reply, type_name_Processor_Reply.to_string());
@@ -396,11 +397,11 @@ void register_Processor_Reply_type_identifier(
             ReturnCode_t return_code_router {eprosima::fastdds::dds::RETCODE_OK};
             return_code_router =
                 eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-                "urpc2::detail::Processor_router_Result", type_ids_router);
+                "urpc2::gen::detail::Processor_router_Result", type_ids_router);
 
             if (eprosima::fastdds::dds::RETCODE_OK != return_code_router)
             {
-                ::urpc2::detail::register_Processor_router_Result_type_identifier(type_ids_router);
+                ::urpc2::gen::detail::register_Processor_router_Result_type_identifier(type_ids_router);
             }
             StructMemberFlag member_flags_router = TypeObjectUtils::build_struct_member_flag(eprosima::fastdds::dds::xtypes::TryConstructFailAction::DISCARD,
                     true, false, false, false);
@@ -482,10 +483,12 @@ void register_Processor_Reply_type_identifier(
                 TypeObjectUtils::build_and_register_struct_type_object(struct_type_Processor_Reply, type_name_Processor_Reply.to_string(), type_ids_Processor_Reply))
         {
             EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                    "urpc2::detail::Processor_Reply already registered in TypeObjectRegistry for a different type.");
+                    "urpc2::gen::detail::Processor_Reply already registered in TypeObjectRegistry for a different type.");
         }
     }
 }
+
+} // namespace gen
 
 } // namespace urpc2
 

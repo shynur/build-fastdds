@@ -56,6 +56,8 @@
 
 namespace urpc2 {
 
+namespace gen {
+
 
 /*!
  * @brief This class represents the interface Processor defined by the user in the IDL file.
@@ -74,6 +76,8 @@ public:
 };
 
 
+
+} // namespace gen
 
 } // namespace urpc2
 

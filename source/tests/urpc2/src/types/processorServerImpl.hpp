@@ -27,6 +27,8 @@
 
 namespace urpc2 {
 
+namespace gen {
+
 //{ interface Processor
 
 struct ProcessorServerImplementation :
@@ -47,6 +49,9 @@ struct ProcessorServerImplementation :
 };
 
 //} interface Processor
+
+
+} // namespace gen
 
 
 } // namespace urpc2

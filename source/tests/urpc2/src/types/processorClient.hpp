@@ -31,10 +31,15 @@
 
 namespace urpc2 {
 
+namespace gen {
+
 extern eProsima_user_DllExport std::shared_ptr<Processor> create_ProcessorClient(
         eprosima::fastdds::dds::DomainParticipant& part,
         const char* service_name,
         const eprosima::fastdds::dds::RequesterQos& qos);
+
+
+} // namespace gen
 
 
 } // namespace urpc2

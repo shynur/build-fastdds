@@ -15,7 +15,7 @@ Usage:
 - instance name 在 DDS domain 内必须 unique.
 - handler name 只在所属 instance 内有效.
 - `register_handler()` 会新建/替换一个 handler.
-- `call(receiver_instance_name, its_handler_name, args)` 会 同步 等待回复.
+- `call(receiver_instance_name, its_handler_name, args, timeout)` 会 同步 等待回复.
 
 ## 架构
 
