@@ -9,31 +9,34 @@ find_package(fastcdr 2 REQUIRED)
 find_package(fastdds 3.4 REQUIRED)
 find_package(Threads REQUIRED)
 
+# 获取 IDL 由 fastddsgen 生成的产物 (只取 *.cxx 和 *.hpp 文件)
+set(urpc2_processor_idl src/types/processor.idl)
+get_filename_component(urpc2_processor_idl_dir "${urpc2_processor_idl}" DIRECTORY)
+get_filename_component(urpc2_processor_idl_base "${urpc2_processor_idl}" NAME_WE)
+file(GLOB urpc2_processor_generated_sources CONFIGURE_DEPENDS
+    "${urpc2_processor_idl_dir}/${urpc2_processor_idl_base}*.cxx"
+)
+file(GLOB urpc2_processor_generated_headers CONFIGURE_DEPENDS
+    "${urpc2_processor_idl_dir}/${urpc2_processor_idl_base}*.hpp"
+)
+
 add_library(urpc2_processor_gen STATIC)
+set_target_properties(urpc2_processor_gen
+    PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+)
 target_sources(urpc2_processor_gen
     PRIVATE
-        # TODO: 以 IDL 文件的 basename 为前缀, cxx 为后缀, 自动获取
-        src/types/processorClient.cxx
-        src/types/processorServer.cxx
-        src/types/processorPubSubTypes.cxx
-        src/types/processorTypeObjectSupport.cxx
+        ${urpc2_processor_generated_sources}
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS src
         FILES
-            # TODO: 以 IDL 文件的 basename 为前缀, hpp 为后缀, 自动获取
-            src/types/processor.hpp
-            src/types/processor_details.hpp
-            src/types/processorClient.hpp
-            src/types/processorServer.hpp
-            src/types/processorServerImpl.hpp
-            src/types/processorPubSubTypes.hpp
-            src/types/processorCdrAux.hpp
-            src/types/processorTypeObjectSupport.hpp
+            ${urpc2_processor_generated_headers}
 )
 target_compile_features(urpc2_processor_gen
-  PUBLIC
-    cxx_std_17
+    PUBLIC
+        cxx_std_17
 )
 target_link_libraries(urpc2_processor_gen
     PUBLIC
@@ -51,8 +54,12 @@ target_sources(urpc2
         BASE_DIRS include
         FILES include/urpc2.hpp
 )
-target_link_libraries(urpc2
+target_compile_features(urpc2
     PUBLIC
+        cxx_std_17
+)
+target_link_libraries(urpc2
+    PRIVATE
         urpc2_processor_gen
 )
 
