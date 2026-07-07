@@ -68,11 +68,15 @@ Ubuntu 18.04 容器, 并在容器内完成配置, 构建和运行.
 1. 创建 Ubuntu 18.04 容器.
 2. 在容器内安装基础构建工具, `clang++-6` 和 `g++-7`.
    让 `clang++-6` 使用 `g++-7` 附带的 libstdc++.
+   Ubuntu 18.04 已 EOL, 若 `apt-get update` 无法从默认 archive 拉取, 先把
+   `/etc/apt/sources.list` 中的 `archive.ubuntu.com` 和 `security.ubuntu.com`
+   替换为 `old-releases.ubuntu.com` 再安装.
 3. 按仓库其它脚本使用的方式安装 CMake: 从 Kitware 官方 release 下载
    CMake 3.31.12 自解压安装器, 使用 `--skip-license --prefix=/usr/local`
    安装到 `/usr/local`.
 4. 下载 Fast DDS 等相关依赖安装包并解压到 `/opt/install-x64`:
    <https://github.com/shynur/build-fastdds/releases/download/v3.4.3%2B202607061456/install-x64.tar.gz>
+   该安装包中的 Fast DDS 构建关闭了 SHM 功能.
 5. 将 `source/tests/urpc2` 复制到容器内的 `/work/urpc2`.
 6. 在容器内使用 `cmake`, Unix Makefiles, `clang++-6.0` 和
    `-DCMAKE_PREFIX_PATH=/opt/install-x64` 配置并构建到 `/work/urpc2-build`.
@@ -100,6 +104,9 @@ LD_LIBRARY_PATH=/opt/install-x64/lib:/opt/install-x64/lib64 \
 - `urpc2-mesh-1`: `node1`, `node2`
 - `urpc2-mesh-2`: `node3`, `node4`
 - `urpc2-mesh-3`: `node5`, `node6`
+
+为避免在三个容器中重复安装工具链和依赖, 可先按上述环境准备步骤配置并构建
+一个容器, 用 `docker commit` 将其保存为镜像, 再由该镜像启动这三个容器.
 
 每个进程都会:
 
