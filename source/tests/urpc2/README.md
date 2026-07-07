@@ -10,6 +10,26 @@
 
 公共 API 在 `include/urpc2.hpp` 中通过 Doxygen 注释记录.
 
+### 类型化封装 `urpc2_rbk`
+
+`include/urpc2_rbk.hpp` 提供 `urpc2::Urpc2` 之上的一层类型化便捷封装, 免去手写
+string 到 string 搬运的样板.  它按需创建/复用底层 `Urpc2` 实例, 用
+nlohmann/json 打包和解包参数与返回值, 因此处理器可写成普通函数:
+
+```c++
+// 注册: 传入普通函数, 参数与返回值即线上契约.
+urpc2_rbk::serve("instance_name", "handler_name", std::function{
+    [](int a, std::string b) { return a + b.length(); }
+});
+
+// 调用: 类型化传参, 反序列化返回值.  Ret 为 std::tuple 时可解包多返回值,
+// 为 void 时忽略返回值.
+double result = urpc2_rbk::call<double, int, std::string>(
+    "instance_name", "handler_name", 1, "this is a string");
+```
+
+该封装隐藏了 `urpc2::Urpc2::call()` 要求的 timeout, 使用一个内部默认值.
+
 Usage:
 - `Urpc2{name}` 会创建一个服务名为 `name` 的 DDS RPC service.
 - instance name 在 DDS domain 内必须 unique.
@@ -51,6 +71,7 @@ make -C /tmp/urpc2-build -j2
 本项目会构建:
 - `urpc2_processor_gen`: 生成 RPC 代码的静态库.
 - `urpc2`: 静态包装库.
+- `urpc2_rbk`: `urpc2` 之上的类型化便捷封装库.
 - `urpc2_simple`: 单进程冒烟示例.
 - `urpc2_mesh_node`: 用于多进程测试的单进程网格节点.
 

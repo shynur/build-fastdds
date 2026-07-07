@@ -3,6 +3,8 @@
 请使用以下文档位置, 避免重复相同说明:
 - 公共用户 API: `include/urpc2.hpp`
   - `urpc2::Urpc2`, `Handler`, `register_handler()`, and `call()` 上的 Doxygen 注释.
+- 类型化封装 API: `include/urpc2_rbk.hpp`
+  - `urpc2_rbk::serve()` 和 `call()` 上的 Doxygen 注释; 实现细节见 `src/urpc2_rbk.cpp` 的块注释.
 - 架构和测试流程: `README.md`
   - 涵盖 IDL 路由, 生成代码边界, 构建命令, 单进程冒烟测试, 以及三容器网格测试.
 - 内部实现说明: `src/urpc2.cpp`
