@@ -23,7 +23,7 @@
 namespace urpc2 { namespace {
 
 auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
-    const auto *const factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
+    const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
     if (!factory) {
         throw std::runtime_error{"Failed to get Fast DDS participant factory"};
     }
@@ -48,7 +48,7 @@ void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const parti
     }
 
     participant->delete_contained_entities();
-    const auto *const factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
+    const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
     if (factory) {
         factory->delete_participant(participant);
     }
