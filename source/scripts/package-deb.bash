@@ -27,7 +27,7 @@ esac
 
 PKG="urpc2"
 STAGE="${REPO_ROOT}/deb-${ARCH}"
-DEB="${REPO_ROOT}/${PKG}_${VERSION}_${ARCH}.deb"
+DEB="${REPO_ROOT}/${PKG}-v${VERSION}-${ARCH}.deb"
 
 rm -rf "${STAGE}" "${DEB}"
 mkdir -p "${STAGE}/usr/local" "${STAGE}/DEBIAN"
