@@ -62,6 +62,7 @@ void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const parti
 class TemporaryParticipant {
   ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
   public:
+    TemporaryParticipant() = default;
     TemporaryParticipant(const TemporaryParticipant&) = delete;
     ~TemporaryParticipant() {
         delete_participant(this->participant_);
