@@ -45,7 +45,8 @@ target_link_libraries(urpc2_processor_gen
         Threads::Threads
 )
 
-add_library(urpc2)
+add_library(urpc2 SHARED)
+add_library(urpc2::urpc2 ALIAS urpc2)
 target_sources(urpc2
     PRIVATE
         src/urpc2.cpp
@@ -63,7 +64,8 @@ target_link_libraries(urpc2
         urpc2_processor_gen
 )
 
-add_library(urpc2_rbk)
+add_library(urpc2_rbk SHARED)
+add_library(urpc2::urpc2_rbk ALIAS urpc2_rbk)
 target_sources(urpc2_rbk
     PRIVATE
         src/urpc2_rbk.cpp
@@ -91,5 +93,40 @@ target_link_libraries(urpc2_mesh_node urpc2)
 add_executable(urpc2_mesh_node_rbk examples/mesh_node_rbk.cpp)
 target_link_libraries(urpc2_mesh_node_rbk urpc2_rbk)
 
-add_executable(test_urpc2_rbk examples/test_urpc2_rbk.cpp)
-target_link_libraries(test_urpc2_rbk urpc2_rbk)
+
+
+
+#--------------- install -------------------
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+install(
+    TARGETS
+        urpc2
+        urpc2_rbk
+    EXPORT
+        urpc2Targets
+    FILE_SET
+        HEADERS
+)
+
+install(
+       EXPORT  urpc2Targets
+  DESTINATION  ${CMAKE_INSTALL_LIBDIR}/cmake/urpc2
+    NAMESPACE  urpc2::
+)
+
+install(
+    FILES
+        cmake/urpc2Config.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/urpc2
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/urpc2ConfigVersion.cmake
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/urpc2ConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/urpc2
+)
