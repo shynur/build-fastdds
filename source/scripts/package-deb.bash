@@ -17,7 +17,8 @@ ARCH="$(detect_arch)"
 PREFIX="${REPO_ROOT}/install-${ARCH}"
 [ -d "${PREFIX}" ] || { echo "缺少 ${PREFIX}; 请先运行 build-fastdds.bash" >&2; exit 1; }
 
-# 架构后缀 -> deb 规范的架构名.
+# deb control 的 Architecture 字段须用 dpkg 规范的架构名 (dpkg 据此校验/安装);
+# 文件名则保留仓库惯用的 x64 / arm64 写法 (纯命名, 不影响 dpkg 执行).
 case "${ARCH}" in
     x64)   DEB_ARCH="amd64" ;;
     arm64) DEB_ARCH="arm64" ;;
@@ -26,7 +27,7 @@ esac
 
 PKG="urpc2"
 STAGE="${REPO_ROOT}/deb-${ARCH}"
-DEB="${REPO_ROOT}/${PKG}_${VERSION}_${DEB_ARCH}.deb"
+DEB="${REPO_ROOT}/${PKG}_${VERSION}_${ARCH}.deb"
 
 rm -rf "${STAGE}" "${DEB}"
 mkdir -p "${STAGE}/usr/local" "${STAGE}/DEBIAN"
