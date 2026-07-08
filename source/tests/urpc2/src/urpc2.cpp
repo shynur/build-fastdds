@@ -20,9 +20,7 @@
 #include "types/processorServer.hpp"
 
 
-namespace urpc2 { namespace {
-
-auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
+static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
     const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
     if (!factory) {
         throw std::runtime_error{"Failed to get Fast DDS participant factory"};
@@ -42,7 +40,7 @@ auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
  * 对象.  这里仍然会在把 participant 交还给工厂前调用 delete_contained_entities(),
  * 作为防御性的清理边界.
  */
-void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const participant) noexcept {
+static void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const participant) noexcept {
     if (participant == nullptr) {
         return;
     }
@@ -54,30 +52,25 @@ void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const parti
     }
 }
 
-/*
- * 单个短生命周期客户端 participant 的 RAII 包装.
- *
- * 当前调用路径会为每次 RPC 创建一个临时 participant 和生成的 ProcessorClient.
- */
-class TemporaryParticipant {
-  ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
-  public:
-    TemporaryParticipant() = default;
-    TemporaryParticipant(const TemporaryParticipant&) = delete;
-    ~TemporaryParticipant() {
-        delete_participant(this->participant_);
-    }
-    auto get() const -> ::eprosima::fastdds::dds::DomainParticipant& {
-        return *this->participant_;
-    }
-};
-
-}}  // namespace urpc2
-
-
-
-
-
+namespace {
+    /*
+     * 单个短生命周期客户端 participant 的 RAII 包装.
+     *
+     * 当前调用路径会为每次 RPC 创建一个临时 participant 和生成的 ProcessorClient.
+     */
+    class TemporaryParticipant {
+        ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
+      public:
+        TemporaryParticipant() = default;
+        TemporaryParticipant(const TemporaryParticipant&) = delete;
+        ~TemporaryParticipant() {
+            delete_participant(this->participant_);
+        }
+        auto get() const -> ::eprosima::fastdds::dds::DomainParticipant& {
+            return *this->participant_;
+        }
+    };
+}
 
 class urpc2::Urpc2::Impl {
     class Router final: public gen::ProcessorServer_IServerImplementation {
