@@ -68,7 +68,7 @@ auto invoke_from_json(
     const ::nlohmann::json& args,
     std::index_sequence<I...>
 ) -> std::string {
-    static_cast<void>(args);  // 零参处理器不会索引 args.
+    (void)args;  // 零参处理器不会索引 args.
     if constexpr (std::is_void_v<R>) {
         fn(args.at(I).template get<std::decay_t<A>>()...);
         return ::nlohmann::json(nullptr).dump();
@@ -130,7 +130,7 @@ auto call(
     auto response = detail::call_raw(instance_name, handler_name, args_json.dump());
 
     if constexpr (std::is_void_v<Ret>) {
-        static_cast<void>(response);
+        (void)response;
     } else {
         return ::nlohmann::json::parse(std::move(response)).template get<Ret>();
     }
