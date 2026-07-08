@@ -41,5 +41,5 @@
 
 `.github/workflows/build.yaml` 经 GitHub Actions: 先由 `generate` 作业用 `fastddsgen` 生成测试
 类型代码 (架构无关, 只一次), 再为 x64 / arm64 各构建一次 (消费该产物), 跑通 DDS 与 RPC
-测试后由 `scripts/package-deb.bash` 打成 `urpc2_<版本>_<x64|arm64>.deb` (安装前缀 `/usr/local`)
-发布为 release.  安装: `sudo dpkg -i urpc2_*.deb`.
+测试后由 `scripts/package-deb.bash` 打成 deb (安装前缀 `/usr/local`) 发布为 release.
+安装: `sudo dpkg -i <deb>`.

@@ -126,7 +126,9 @@ jobs:
             "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
             bash scripts/ci-build.bash
 
-      - name: Package fastdds .deb
+      - name: Package urpc2 .deb
+        env:
+          DEB_MAINTAINER: "${{ github.repository_owner }} <${{ github.server_url }}/${{ github.repository }}>"
         run: |
           set -euo pipefail
           sudo chown -R "$(id -u):$(id -g)" "source/install-${{ matrix.arch }}"   # 容器内产物归 root
@@ -143,7 +145,7 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # 3. 发布 release (仅 push 触发), 附件为两份 install-*.tar.gz
+  # 3. 发布 release (仅 push 触发), 附件为两份 urpc2 deb (x64 / arm64)
   # ---------------------------------------------------------------------------
   release:
     needs: [meta, build]
@@ -168,4 +170,4 @@ jobs:
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "${{ needs.meta.outputs.tag }}" \
-            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试.  附件: urpc2-v*-x64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), urpc2-v*-arm64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }}).  安装: sudo dpkg -i <deb>, 装到 /usr/local."
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }}.  附件: urpc2-v*-x64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), urpc2-v*-arm64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }}).  安装: sudo dpkg -i <deb>, 装到 /usr/local."

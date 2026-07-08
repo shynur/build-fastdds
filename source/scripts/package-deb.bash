@@ -29,6 +29,10 @@ PKG="urpc2"
 STAGE="${REPO_ROOT}/deb-${ARCH}"
 DEB="${REPO_ROOT}/${PKG}-v${VERSION}-${ARCH}.deb"
 
+# Maintainer 是 deb 必填字段. 由调用方 (CI) 经环境变量传入真实来源 (仓库地址);
+# 独立运行且未设时退回本机 user@host, 不编造联系方式.
+MAINTAINER="${DEB_MAINTAINER:-$(id -un)@$(hostname)}"
+
 rm -rf "${STAGE}" "${DEB}"
 mkdir -p "${STAGE}/usr/local" "${STAGE}/DEBIAN"
 
@@ -39,12 +43,12 @@ cat > "${STAGE}/DEBIAN/control" <<EOF
 Package: ${PKG}
 Version: ${VERSION}
 Architecture: ${DEB_ARCH}
-Maintainer: build-fastdds CI <noreply@example.com>
+Maintainer: ${MAINTAINER}
 Section: libs
 Priority: optional
-Description: eProsima Fast DDS + Fast-CDR + foonathan_memory + urpc2 (g++ build)
- 用 g++ 构建的 Fast DDS 及其依赖 (Fast-CDR / foonathan_memory), 以及基于其上的
- urpc2 库 (urpc2 / urpc2_rbk), 安装到 /usr/local. 由 build-fastdds CI 自动打包.
+Description: eProsima Fast DDS + Fast-CDR + foonathan_memory + urpc2
+ Fast DDS 及其依赖 (Fast-CDR / foonathan_memory), 基于其上的 urpc2 库
+ (urpc2 / urpc2_rbk), 以及示例 urpc2_rbk_example, 安装到 /usr/local.
 EOF
 
 # /usr/local/lib 已在默认 ld 搜索路径内 (Ubuntu 的 /etc/ld.so.conf.d/libc.conf);
