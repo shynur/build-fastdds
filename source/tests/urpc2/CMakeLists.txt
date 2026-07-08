@@ -63,9 +63,6 @@ target_link_libraries(urpc2
         urpc2_processor_gen
 )
 
-# urpc2 之上的类型化便捷封装.  头文件依赖 urpc2.hpp 和 nlohmann/json.hpp,
-# 二者都在 include/ 下, 通过 urpc2 的 PUBLIC 头文件集与本目标自身的头文件集
-# 加入包含路径.
 add_library(urpc2_rbk)
 target_sources(urpc2_rbk
     PRIVATE
@@ -75,14 +72,11 @@ target_sources(urpc2_rbk
         BASE_DIRS include
         FILES include/urpc2_rbk.hpp
 )
-target_compile_features(urpc2_rbk
-    PUBLIC
-        cxx_std_17
-)
 target_link_libraries(urpc2_rbk
     PUBLIC
         urpc2
 )
+
 
 
 
@@ -96,3 +90,6 @@ target_link_libraries(urpc2_mesh_node urpc2)
 
 add_executable(urpc2_mesh_node_rbk examples/mesh_node_rbk.cpp)
 target_link_libraries(urpc2_mesh_node_rbk urpc2_rbk)
+
+add_executable(test_urpc2_rbk examples/test_urpc2_rbk.cpp)
+target_link_libraries(test_urpc2_rbk urpc2_rbk)

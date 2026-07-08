@@ -77,7 +77,6 @@ class urpc2::Urpc2::Impl {
 
     const std::string name_;
     mutable std::mutex handlers_mutex_;
-    // 每个实例预置一个名为 "hi" 的测试 handler; 它会回显实例名和收到的参数.
     std::map<std::string, std::shared_ptr<Handler>> handlers_ = {
         {
             "hi",
