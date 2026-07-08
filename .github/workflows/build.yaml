@@ -126,18 +126,20 @@ jobs:
             "ubuntu:${{ steps.cfg.outputs.ubuntu }}" \
             bash scripts/ci-build.bash
 
-      - name: Package install-${{ matrix.arch }}.tar.gz
+      - name: Package fastdds .deb
         run: |
           set -euo pipefail
           sudo chown -R "$(id -u):$(id -g)" "source/install-${{ matrix.arch }}"   # 容器内产物归 root
-          tar czf "install-${{ matrix.arch }}.tar.gz" -C source "install-${{ matrix.arch }}"
-          ls -lh "install-${{ matrix.arch }}.tar.gz"
+          # deb 内部 Version 须数字开头, 故剥掉 tag 开头的 'v' (release tag 本身不变).
+          VERSION="${{ needs.meta.outputs.tag }}"; VERSION="${VERSION#v}"
+          bash source/scripts/package-deb.bash "${VERSION}"
+          ls -lh source/urpc2_*_*.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: install-${{ matrix.arch }}
-          path: install-${{ matrix.arch }}.tar.gz
+          name: fastdds-deb-${{ matrix.arch }}
+          path: source/urpc2_*_*.deb
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -161,9 +163,9 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "${{ needs.meta.outputs.tag }}" \
-            artifacts/install-x64/install-x64.tar.gz \
-            artifacts/install-arm64/install-arm64.tar.gz \
+            artifacts/fastdds-deb-x64/urpc2_*_amd64.deb \
+            artifacts/fastdds-deb-arm64/urpc2_*_arm64.deb \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "${{ needs.meta.outputs.tag }}" \
-            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试.  附件: install-x64.tar.gz (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), install-arm64.tar.gz (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }})."
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }} -- 用 g++ 编译库, clang 编译并测试.  附件: urpc2_*_amd64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), urpc2_*_arm64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }}).  安装: sudo dpkg -i <deb>, 装到 /usr/local."

@@ -72,7 +72,9 @@ target_sources(urpc2_rbk
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS include
-        FILES include/urpc2_rbk.hpp
+        FILES
+            include/urpc2_rbk.hpp
+            include/nlohmann/json.hpp
 )
 target_link_libraries(urpc2_rbk
     PUBLIC
@@ -124,6 +126,7 @@ install(
 
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/urpc2ConfigVersion.cmake
+    COMPATIBILITY SameMajorVersion
 )
 
 install(

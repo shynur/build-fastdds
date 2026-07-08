@@ -10,3 +10,5 @@ bash "${here}/fetch-foonathan.bash"
 bash "${here}/apply-patch.bash"
 bash "${here}/build-fastdds.bash"
 bash "${here}/run-tests.bash"
+bash "${here}/build-urpc2.bash"    # 测试通过后, 把 urpc2 装进同一 install-<arch>/, 一并打进 deb
+bash "${here}/build-urpc2-rbk-example.bash"    # 再把依赖 urpc2 的示例可执行文件装进 bin/
