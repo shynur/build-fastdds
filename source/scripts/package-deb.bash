@@ -61,4 +61,6 @@ done
 dpkg-deb --root-owner-group --build "${STAGE}" "${DEB}"
 echo ">> built ${DEB}"
 dpkg-deb --info "${DEB}"
-dpkg-deb --contents "${DEB}" | head -n 20
+# 内容预览仅作诊断: head 提前关管道会让上游 dpkg-deb 收到写错误而非零退出,
+# 在 pipefail 下会误判整步失败, 故此预览局部关掉 pipefail 并容忍其退出码.
+( set +o pipefail; dpkg-deb --contents "${DEB}" | head -n 20 ) || true
