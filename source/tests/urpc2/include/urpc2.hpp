@@ -33,7 +33,7 @@ class urpc2::Urpc2 {
      *
      * @throws std::runtime_error 如果 Fast DDS participant or server 创建失败.
      */
-    explicit Urpc2(std::string name);
+    explicit Urpc2(const std::string& name);
     ~Urpc2();
 
     auto name() const noexcept -> const std::string&;
@@ -43,7 +43,7 @@ class urpc2::Urpc2 {
      *
      * @throws std::invalid_argument 如果 @p handler 不可调用.
      */
-    void register_handler(std::string handler_name, Handler handler);
+    void register_handler(const std::string& handler_name, Handler handler);
 
     /**
      * @brief 调用指定 name 的 Urpc2 instance 上的 handler.
@@ -55,6 +55,6 @@ class urpc2::Urpc2 {
         const std::string& receiver_name,
         const std::string& handler_name,
         const std::string& args,
-        std::chrono::milliseconds timeout  // TODO: 改成能接受 1s 1ms 1min 这类值的
+        std::chrono::duration<double> timeout
     ) -> std::string;
 };

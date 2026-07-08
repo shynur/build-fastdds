@@ -60,15 +60,12 @@ void delete_participant(::eprosima::fastdds::dds::DomainParticipant *const parti
  * 当前调用路径会为每次 RPC 创建一个临时 participant 和生成的 ProcessorClient.
  */
 class TemporaryParticipant {
-  ::eprosima::fastdds::dds::DomainParticipant *const participant_ = nullptr;
+  ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
   public:
-    TemporaryParticipant(): participant_{create_participant()} {}
+    TemporaryParticipant(const TemporaryParticipant&) = delete;
     ~TemporaryParticipant() {
         delete_participant(this->participant_);
     }
-
-    TemporaryParticipant(const TemporaryParticipant&) = delete;
-
     auto get() const -> ::eprosima::fastdds::dds::DomainParticipant& {
         return *this->participant_;
     }
@@ -88,21 +85,19 @@ class urpc2::Urpc2::Impl {
         explicit Router(Impl& owner): owner_{owner} {}
         std::string router(
             const ::eprosima::fastdds::dds::rpc::RpcRequest&,
-            const std::string& handler_name,
-            const std::string& args
+            const std::string& handler_name, const std::string& args
         ) override {
             return this->owner_.dispatch(handler_name, args);
         }
     };
 
-    std::string name_;
-    ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
+    const std::string name_;
+    mutable std::mutex handlers_mutex_;
+    std::map<std::string, std::shared_ptr<Handler>> handlers_;
 
+    ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();  // TODO: 因异常导致的不完整初始化场景下, 该指针的资源不会被释放.
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_;
     std::thread server_thread_;
-
-    std::mutex handlers_mutex_;
-    std::map<std::string, Handler> handlers_;
   public:
     explicit Impl(const std::string& name)
     : name_{name},
@@ -129,11 +124,15 @@ class urpc2::Urpc2::Impl {
     }
 
     /*
-     * 删除 participant 前停止服务器.
+     * 在成员自动析构前手动关闭, 这是正确性要求, 不是风格问题.
      *
-     * 生成服务器的析构也会调用 stop(), 但这里显式执行可让关闭顺序更清楚:
-     * 停止运行循环, 等待线程结束, 释放生成的服务器对象, 然后删除
-     * participant.
+     * server_thread_ 声明在 server_ 之后, 逆序析构时会先被销毁; 若此时
+     * run() 仍在阻塞运行, 销毁一个 joinable 的线程会触发 std::terminate().
+     * 所以必须先 stop() 打断运行循环, 再 join() 等线程退出.
+     *
+     * 随后先销毁 server (释放它从 participant 借来的 DDS 实体), 最后手动
+     * 删除裸指针 participant_. 顺序反了会先删掉 participant, 而 server 仍
+     * 持有其实体, 造成悬空访问.
      */
     ~Impl() {
         if (this->server_) {
@@ -159,7 +158,7 @@ class urpc2::Urpc2::Impl {
         }
         {
             const auto lock = std::lock_guard<std::mutex>{this->handlers_mutex_};
-            this->handlers_[handler_name] = std::move(handler);
+            this->handlers_[handler_name] = std::make_shared<Handler>(std::move(handler));
         }
     }
 
@@ -167,7 +166,7 @@ class urpc2::Urpc2::Impl {
         const std::string& receiver_name,
         const std::string& handler_name,
         const std::string& args,
-        const std::chrono::milliseconds timeout
+        const std::chrono::duration<double> timeout
     ) -> std::string {
         TemporaryParticipant participant;
         const auto client = gen::create_ProcessorClient(
@@ -188,38 +187,33 @@ class urpc2::Urpc2::Impl {
         return future.get();
     }
 
-    /*
-     * 持有注册表互斥量时复制处理器, 并在释放互斥量后调用.  这样一个处理器就
-     * 可以注册或替换其他处理器, 而不会让分发路径死锁.
-     */
-    auto dispatch(const std::string& handler_name, const std::string& args) -> std::string {
-        Handler handler;
-        {
+    auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {
+        const std::shared_ptr<Handler> handler = [&] {
             const auto lock = std::lock_guard<std::mutex>{this->handlers_mutex_};
             const auto iter = this->handlers_.find(handler_name);
             if (iter == this->handlers_.end()) {
                 const auto message = "No such Urpc2 handler: "s + handler_name;
                 throw ::eprosima::fastdds::dds::rpc::RemoteUnknownOperationError{message.c_str()};
             }
-            handler = iter->second;
-        }
-        return handler(args);
+            return iter->second;
+        }();
+        return (*handler)(args);
     }
 };
 
-urpc2::Urpc2::Urpc2(std::string name): impl_{std::make_unique<Impl>(std::move(name))} {}
-urpc2::Urpc2::~Urpc2() = default;  // TODO: 既然 default, 那不声明 析构函数 也行吧?
+urpc2::Urpc2::Urpc2(const std::string& name): impl_{std::make_unique<Impl>(name)} {}
+urpc2::Urpc2::~Urpc2() = default;
 auto urpc2::Urpc2::name() const noexcept -> const std::string& {
     return this->impl_->name();
 }
-void urpc2::Urpc2::register_handler(const std::string handler_name, Handler handler) {
+void urpc2::Urpc2::register_handler(const std::string& handler_name, Handler handler) {
     this->impl_->register_handler(handler_name, std::move(handler));
 }
 auto urpc2::Urpc2::call(
     const std::string& receiver_name,
     const std::string& handler_name,
     const std::string& args,
-    const std::chrono::milliseconds timeout
+    const std::chrono::duration<double> timeout
 ) -> std::string {
     return this->impl_->call(receiver_name, handler_name, args, timeout);
 }
