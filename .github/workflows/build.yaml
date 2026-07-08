@@ -128,7 +128,7 @@ jobs:
 
       - name: Package urpc2 .deb
         env:
-          DEB_MAINTAINER: "${{ github.repository_owner }} <${{ github.server_url }}/${{ github.repository }}>"
+          DEB_MAINTAINER: "${{ github.repository_owner }} <shynur@outlook.com>"
         run: |
           set -euo pipefail
           sudo chown -R "$(id -u):$(id -g)" "source/install-${{ matrix.arch }}"   # 容器内产物归 root
