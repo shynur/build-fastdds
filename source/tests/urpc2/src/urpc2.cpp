@@ -2,6 +2,7 @@
 
 #include <future>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -53,23 +54,12 @@ static void delete_participant(::eprosima::fastdds::dds::DomainParticipant *cons
 }
 
 namespace {
-    /*
-     * 单个短生命周期客户端 participant 的 RAII 包装.
-     *
-     * 当前调用路径会为每次 RPC 创建一个临时 participant 和生成的 ProcessorClient.
-     */
-    class TemporaryParticipant {
-        ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();
-      public:
-        TemporaryParticipant() = default;
-        TemporaryParticipant(const TemporaryParticipant&) = delete;
-        ~TemporaryParticipant() {
-            delete_participant(this->participant_);
-        }
-        auto get() const -> ::eprosima::fastdds::dds::DomainParticipant& {
-            return *this->participant_;
+    struct ParticipantDeleter {
+        void operator()(::eprosima::fastdds::dds::DomainParticipant *const p) const {
+            delete_participant(p);
         }
     };
+    using Participant = std::unique_ptr<::eprosima::fastdds::dds::DomainParticipant, ParticipantDeleter>;
 }
 
 class urpc2::Urpc2::Impl {
@@ -89,12 +79,13 @@ class urpc2::Urpc2::Impl {
     mutable std::mutex handlers_mutex_;
     std::map<std::string, std::shared_ptr<Handler>> handlers_;
 
-    ::eprosima::fastdds::dds::DomainParticipant *const participant_ = create_participant();  // TODO: 因异常导致的不完整初始化场景下, 该指针的资源不会被释放.
+    const Participant participant_;
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_;
     std::thread server_thread_;
   public:
     explicit Impl(const std::string& name)
     : name_{name},
+      participant_{create_participant()},
       server_{
           [this] {
               const auto router = std::make_shared<Router>(*this);
@@ -137,7 +128,6 @@ class urpc2::Urpc2::Impl {
         }
 
         this->server_.reset();
-        delete_participant(this->participant_);
     }
 
     auto name() const noexcept -> const std::string& { return this->name_; }
@@ -162,9 +152,9 @@ class urpc2::Urpc2::Impl {
         const std::string& args,
         const std::chrono::duration<double> timeout
     ) -> std::string {
-        TemporaryParticipant participant;
+        const auto participant = Participant{create_participant()};
         const auto client = gen::create_ProcessorClient(
-            participant.get(),
+            *participant,
             receiver_name.c_str(),
             ::eprosima::fastdds::dds::RequesterQos{}
         );
