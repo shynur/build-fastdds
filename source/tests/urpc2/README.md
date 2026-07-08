@@ -90,9 +90,9 @@ Ubuntu 18.04 容器, 并在容器内完成配置, 构建和运行.
 1. 创建 Ubuntu 18.04 容器.
 2. 在容器内安装基础构建工具, `clang++-6` 和 `g++-7`.
    让 `clang++-6` 使用 `g++-7` 附带的 libstdc++.
-   Ubuntu 18.04 已 EOL, 若 `apt-get update` 无法从默认 archive 拉取, 先把
-   `/etc/apt/sources.list` 中的 `archive.ubuntu.com` 和 `security.ubuntu.com`
-   替换为 `old-releases.ubuntu.com` 再安装.
+   Ubuntu 18.04 已 EOL, 但默认的 `archive.ubuntu.com` 仍可拉取 bionic, 而
+   `old-releases.ubuntu.com` 反而对 bionic 返回 404.  优先用默认 archive; 仅当
+   它也拉不动时, 才把 sources.list 换成 `old-releases.ubuntu.com`.
 3. 按仓库其它脚本使用的方式安装 CMake: 从 Kitware 官方 release 下载
    CMake 3.31.12 自解压安装器, 使用 `--skip-license --prefix=/usr/local`
    安装到 `/usr/local`.
