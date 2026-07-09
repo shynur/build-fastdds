@@ -26,46 +26,77 @@ case "${ARCH}" in
 esac
 
 PKG="urpc2"
-STAGE="${REPO_ROOT}/deb-${ARCH}"
-DEB="${REPO_ROOT}/${PKG}-v${VERSION}-${ARCH}.deb"
 
 # Maintainer 是 deb 必填字段. 由调用方 (CI) 经环境变量传入真实来源 (仓库地址);
 # 独立运行且未设时退回本机 user@host, 不编造联系方式.
 MAINTAINER="${DEB_MAINTAINER:-$(id -un)@$(hostname)}"
 
-rm -rf "${STAGE}" "${DEB}"
-mkdir -p "${STAGE}/usr/local" "${STAGE}/DEBIAN"
+# 把一个已布置好 usr/local/ 的 stage 目录打成 deb.
+#   $1 variant  文件名里的变体标签 (all / necessary), 也用于 control 的 Description.
+#   $2 stage    stage 目录 (含 usr/local/ 内容; DEBIAN/ 由本函数补齐).
+#   $3 desc     control 的 Description 摘要行.
+build_deb() {
+    local variant="$1" stage="$2" desc="$3"
+    local deb="${REPO_ROOT}/${PKG}-${variant}-v${VERSION}-${ARCH}.deb"
+    rm -f "${deb}"
+    mkdir -p "${stage}/DEBIAN"
 
-# install-<arch>/ 的内容 (bin/ lib/ include/ …) 原样搬进包内 /usr/local/ 下.
-cp -a "${PREFIX}/." "${STAGE}/usr/local/"
-
-cat > "${STAGE}/DEBIAN/control" <<EOF
+    cat > "${stage}/DEBIAN/control" <<EOF
 Package: ${PKG}
 Version: ${VERSION}
 Architecture: ${DEB_ARCH}
 Maintainer: ${MAINTAINER}
 Section: libs
 Priority: optional
-Description: eProsima Fast DDS + Fast-CDR + foonathan_memory + urpc2
- Fast DDS 及其依赖 (Fast-CDR / foonathan_memory), 基于其上的 urpc2 库
- (urpc2 / urpc2_rbk), 以及示例 urpc2_rbk_example, 安装到 /usr/local.
+Description: ${desc}
+ 基于 Fast DDS 的 urpc2 库 (urpc2 / urpc2_rbk) 及示例 urpc2_rbk_example,
+ 安装到 /usr/local. 变体: ${variant}.
 EOF
 
-# /usr/local/lib 已在默认 ld 搜索路径内 (Ubuntu 的 /etc/ld.so.conf.d/libc.conf);
-# 装/卸机后刷新 ld 缓存.
-for hook in postinst postrm; do
-    cat > "${STAGE}/DEBIAN/${hook}" <<'EOF'
+    # /usr/local/lib 已在默认 ld 搜索路径内 (Ubuntu 的 /etc/ld.so.conf.d/libc.conf);
+    # 装/卸机后刷新 ld 缓存.
+    for hook in postinst postrm; do
+        cat > "${stage}/DEBIAN/${hook}" <<'EOF'
 #!/bin/sh
 set -e
 ldconfig
 EOF
-    chmod 0755 "${STAGE}/DEBIAN/${hook}"
-done
+        chmod 0755 "${stage}/DEBIAN/${hook}"
+    done
 
-# --root-owner-group: 包内文件强制归 root:root, 无需 fakeroot (跳过宿主实际属主).
-dpkg-deb --root-owner-group --build "${STAGE}" "${DEB}"
-echo ">> built ${DEB}"
-dpkg-deb --info "${DEB}"
-# 内容预览仅作诊断: head 提前关管道会让上游 dpkg-deb 收到写错误而非零退出,
-# 在 pipefail 下会误判整步失败, 故此预览局部关掉 pipefail 并容忍其退出码.
-( set +o pipefail; dpkg-deb --contents "${DEB}" | head -n 20 ) || true
+    # --root-owner-group: 包内文件强制归 root:root, 无需 fakeroot (跳过宿主实际属主).
+    dpkg-deb --root-owner-group --build "${stage}" "${deb}"
+    echo ">> built ${deb}"
+    dpkg-deb --info "${deb}"
+    # 内容预览仅作诊断: head 提前关管道会让上游 dpkg-deb 收到写错误而非零退出,
+    # 在 pipefail 下会误判整步失败, 故此预览局部关掉 pipefail 并容忍其退出码.
+    ( set +o pipefail; dpkg-deb --contents "${deb}" | head -n 20 ) || true
+}
+
+# --- all: 完整包, install-<arch>/ 的全部内容 (bin/ lib/ include/ …) ---
+STAGE_ALL="${REPO_ROOT}/deb-all-${ARCH}"
+rm -rf "${STAGE_ALL}"
+mkdir -p "${STAGE_ALL}/usr/local"
+cp -a "${PREFIX}/." "${STAGE_ALL}/usr/local/"
+build_deb all "${STAGE_ALL}" "eProsima Fast DDS + Fast-CDR + foonathan_memory + urpc2"
+
+# --- necessary: 由 all 裁剪而来, 删掉整个 Fast DDS 技术栈 (fastdds / Fast-CDR /
+#     foonathan_memory) 里除动态链接库以外的所有文件. 只留 libfastdds.so* 与
+#     libfastcdr.so* (运行期链接所需), 以及 urpc2 自身 (头/库/cmake/示例, 含其
+#     bundled 的 nlohmann 头). foonathan_memory 仅有静态库 .a, 无动态库, 故全删. ---
+STAGE_NEC="${REPO_ROOT}/deb-necessary-${ARCH}"
+rm -rf "${STAGE_NEC}"
+cp -a "${STAGE_ALL}" "${STAGE_NEC}"
+rm -rf "${STAGE_NEC}/DEBIAN"   # control/hook 由 build_deb 按 necessary 变体重写
+NEC_LOCAL="${STAGE_NEC}/usr/local"
+rm -rf \
+    "${NEC_LOCAL}/include/fastdds" \
+    "${NEC_LOCAL}/include/fastcdr" \
+    "${NEC_LOCAL}/include/foonathan_memory" \
+    "${NEC_LOCAL}/share/fastdds" \
+    "${NEC_LOCAL}/share/fastcdr" \
+    "${NEC_LOCAL}/share/foonathan_memory" \
+    "${NEC_LOCAL}/lib/cmake/fastcdr" \
+    "${NEC_LOCAL}/lib/foonathan_memory"
+rm -f "${NEC_LOCAL}"/lib/libfoonathan_memory-*.a
+build_deb necessary "${STAGE_NEC}" "urpc2 (含 Fast DDS 运行期动态库, 不含开发文件)"

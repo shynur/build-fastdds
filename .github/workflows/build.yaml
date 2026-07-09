@@ -135,13 +135,13 @@ jobs:
           # deb 内部 Version 须数字开头, 故剥掉 tag 开头的 'v' (release tag 本身不变).
           VERSION="${{ needs.meta.outputs.tag }}"; VERSION="${VERSION#v}"
           bash source/scripts/package-deb.bash "${VERSION}"
-          ls -lh source/urpc2-v*-*.deb
+          ls -lh source/urpc2-*-v*-*.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: fastdds-deb-${{ matrix.arch }}
-          path: source/urpc2-v*-*.deb
+          path: source/urpc2-*-v*-*.deb
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -165,9 +165,11 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "${{ needs.meta.outputs.tag }}" \
-            artifacts/fastdds-deb-x64/urpc2-v*-x64.deb \
-            artifacts/fastdds-deb-arm64/urpc2-v*-arm64.deb \
+            artifacts/fastdds-deb-x64/urpc2-all-v*-x64.deb \
+            artifacts/fastdds-deb-x64/urpc2-necessary-v*-x64.deb \
+            artifacts/fastdds-deb-arm64/urpc2-all-v*-arm64.deb \
+            artifacts/fastdds-deb-arm64/urpc2-necessary-v*-arm64.deb \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "${{ needs.meta.outputs.tag }}" \
-            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }}.  附件: urpc2-v*-x64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}), urpc2-v*-arm64.deb (Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }}).  安装: sudo dpkg -i <deb>, 装到 /usr/local."
+            --notes "Fast DDS ${{ needs.meta.outputs.fastdds_version }}.  附件 (x64: Ubuntu ${{ needs.meta.outputs.ubuntu_x64 }}, arm64: Ubuntu ${{ needs.meta.outputs.ubuntu_arm64 }}): urpc2-all-* 为完整包 (含 Fast DDS 全部头/库/cmake), urpc2-necessary-* 为精简包 (仅 Fast DDS 运行期动态库 + urpc2 自身).  安装: sudo dpkg -i <deb>, 装到 /usr/local."
