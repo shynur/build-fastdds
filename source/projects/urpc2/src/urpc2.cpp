@@ -161,23 +161,70 @@ class urpc2::Urpc2::Impl {
         const std::string& args,
         const std::chrono::duration<double> timeout
     ) -> std::string {
-        const auto participant = Participant{create_participant()};
-        const auto client = gen::create_ProcessorClient(
-            *participant,
-            receiver_name.c_str(),
-            ::eprosima::fastdds::dds::RequesterQos{}
-        );
+        namespace rpc = ::eprosima::fastdds::dds::rpc;
+
+        // --- 建 client: 工厂/participant/client 任何本地失败统一成 LocalError ---
+        auto participant = Participant{};
+        std::shared_ptr<gen::Processor> client;
+        try {
+            participant = Participant{create_participant()};
+            client = gen::create_ProcessorClient(
+                *participant,
+                receiver_name.c_str(),
+                ::eprosima::fastdds::dds::RequesterQos{}
+            );
+        }
+        catch (const rpc::RpcException& e) {
+            throw urpc2::LocalError{
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
+        catch (const std::exception& e) {
+            throw urpc2::LocalError{
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
         if (!client) {
-            throw std::runtime_error{"Failed to create Urpc2 client"};
+            throw urpc2::LocalError{
+                "Failed to create Urpc2 client for instance \""s + receiver_name + '"'};
         }
 
         std::this_thread::sleep_for(5s);  // 给 requester 和 replier 留出彼此发现的时间.
 
         auto future = client->router(handler_name, args);
         if (future.wait_for(timeout) != std::future_status::ready) {
-            throw std::runtime_error{"Urpc2 call timed out"};
+            throw urpc2::Timeout{
+                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out"};
         }
-        return future.get();
+
+        // future.get() 会 rethrow 存进 promise 的 Fast DDS RpcException 子类. 在此
+        // 边界把它们统一翻译成 urpc2 自己的、以 std::exception 为根的异常, 既不把
+        // DDS 类型泄漏给调用方, 也避免非 std::exception 的 RpcException 逃逸导致
+        // std::terminate. catch 顺序须由派生到基类 (Remote 专用码在 RpcRemoteException 前).
+        try {
+            return future.get();
+        }
+        catch (const rpc::RemoteUnknownOperationError& e) {
+            throw urpc2::UnknownOperation{
+                "No such handler \""s + handler_name + "\" on instance \"" + receiver_name + "\" (" + e.what() + ')'};
+        }
+        catch (const rpc::RpcBrokenPipeException& e) {
+            // client 侧的 broken pipe 只源于「发请求时 requester 未匹配」, 即目标未被发现.
+            throw urpc2::ServerNotFound{
+                "No Urpc2 server discovered for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
+        catch (const rpc::RpcTimeoutException& e) {
+            throw urpc2::Timeout{
+                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out (" + e.what() + ')'};
+        }
+        catch (const rpc::RpcRemoteException& e) {
+            // 其余远端错误 (invalid argument / unsupported / out of resources / unknown exception).
+            throw urpc2::RemoteError{
+                "Remote error from instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
+        catch (const rpc::RpcException& e) {
+            // 兜底: 任何未预料的 RpcException, 降级为根 Error, 保留消息, 绝不外泄或 terminate.
+            throw urpc2::Error{
+                "Urpc2 RPC error on instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
     }
 
     auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {

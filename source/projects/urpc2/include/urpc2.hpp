@@ -3,12 +3,73 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 using namespace std::literals;
 
 namespace urpc2 {
     class Urpc2;
+
+    /**
+     * @brief urpc2 所有异常的根.
+     *
+     * 以 std::exception (经 std::runtime_error) 为根, 因此调用方一个
+     * `catch (const std::exception&)` 即可兜住 Urpc2::call() 的全部失败; 想区分
+     * 失败种类再 catch 下面的具体子类.
+     *
+     * 刻意「不」向外暴露底层 Fast DDS 的 eprosima::fastdds::dds::rpc::RpcException:
+     * 它并不继承 std::exception, 一旦逃逸到只 catch std::exception 的调用方就会
+     * std::terminate.  Urpc2::call() 在边界处把这些 DDS 异常翻译成下列类型.
+     */
+    struct Error : std::runtime_error {
+        using std::runtime_error::runtime_error;
+    };
+
+    /**
+     * @brief 未发现目标 instance 的 server.
+     *
+     * 在发现窗口内没有任何名为 receiver 的 Urpc2 server 与调用方 requester 匹配.
+     * 通常意味着目标名写错、对端尚未启动, 或网络不通.
+     */
+    struct ServerNotFound : Error {
+        using Error::Error;
+    };
+
+    /**
+     * @brief 已匹配并发出请求, 但在 timeout 内未收到回复.
+     *
+     * 例如对端匹配成功后处理过慢、卡死, 或请求发出后中途失联.
+     */
+    struct Timeout : Error {
+        using Error::Error;
+    };
+
+    /**
+     * @brief 目标 server 收到了请求, 但以错误应答.
+     *
+     * 携带远端给出的说明 (见 what()).  「无此 handler」这一常见情形另见其子类
+     * UnknownOperation.
+     */
+    struct RemoteError : Error {
+        using Error::Error;
+    };
+
+    /**
+     * @brief 目标 instance 上不存在被调用的 handler.
+     */
+    struct UnknownOperation : RemoteError {
+        using RemoteError::RemoteError;
+    };
+
+    /**
+     * @brief 本地端点创建失败 (Fast DDS participant / client 建不起来).
+     *
+     * 属于本地资源/配置问题, 与对端是否存在无关.
+     */
+    struct LocalError : Error {
+        using Error::Error;
+    };
 }
 
 /**
@@ -52,8 +113,14 @@ class urpc2::Urpc2 {
     /**
      * @brief 调用具有指定 name 的 Urpc2 instance 上的 handler.
      *
-     * @throws std::runtime_error 如果 timeout 或 client 创建失败.
-     * @throws eprosima::fastdds::dds::rpc::RpcException Fast DDS RPC error
+     * 所有失败都以 urpc2::Error (其根为 std::exception) 的子类抛出; 底层 Fast DDS
+     * 的 RpcException 已在实现内被翻译, 不会外泄:
+     *
+     * @throws urpc2::ServerNotFound   未发现目标 instance 的 server.
+     * @throws urpc2::Timeout          已发出请求但超时未收到回复.
+     * @throws urpc2::UnknownOperation 目标 instance 上无此 handler.
+     * @throws urpc2::RemoteError      目标 server 以其它错误应答.
+     * @throws urpc2::LocalError       本地 participant/client 创建失败.
      */
     auto call(
         const std::string& receiver_name,
