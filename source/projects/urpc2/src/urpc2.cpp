@@ -187,8 +187,12 @@ class urpc2::Urpc2::Impl {
                 "Failed to create Urpc2 client for instance \""s + receiver_name + '"'};
         }
 
-        std::this_thread::sleep_for(5s);  // 给 requester 和 replier 留出彼此发现的时间.
-
+        // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
+        // wait_for_matching —— 等 requester 与 replier 双向匹配上, 一旦匹配就立即
+        // 返回 (最多阻塞 Fast DDS 内部默认的 3 秒). 于是:
+        //   - 目标存在:   匹配就绪即发请求, 省去此前无条件的 5s 固定延迟;
+        //   - 目标不存在: 匹配等待到点, send_request 返回失败 -> router() 的 future
+        //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
         auto future = client->router(handler_name, args);
         if (future.wait_for(timeout) != std::future_status::ready) {
             throw urpc2::Timeout{
