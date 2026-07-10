@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 
@@ -29,15 +30,23 @@ int main(int argc, char **argv) {
         }}
     );
 
+    // 一个总是抛异常的 handler: 供验证「远端执行期抛错」-> urpc2::RemoteError.
+    urpc2_rbk::serve(
+        instance_name, "boom",
+        std::function{[] { throw std::runtime_error{"boom: intentional failure"}; }}
+    );
+
     // ------------------------------------
 
     // 1. 打印提供的操作
     std::cout <<
         "实例 \""s + instance_name + "\" 提供以下操作:\n"
-        "  add   <int> <double>   -> double\n"
-        "  swap  <int> <string>   -> [string, int]\n"
-        "  print                  -> (无返回值)\n"
-        "  hi    <int>            -> string   (每个实例预置的测试 handler)\n"
+        "  add     <int> <double>   -> double\n"
+        "  swap    <int> <string>   -> [string, int]\n"
+        "  print                    -> (无返回值)\n"
+        "  hi      <int>            -> string   (每个实例预置的测试 handler)\n"
+        "  boom                     -> (远端 handler 抛异常, 测 RemoteError)\n"
+        "  unknown                  -> (调不存在的 handler, 测 UnknownOperation)\n"
         "\n"
         "以 EOF (Ctrl-D) 结束.\n";
 
@@ -97,11 +106,20 @@ int main(int argc, char **argv) {
                     urpc2_rbk::call<std::string, int>(replier, "hi", num);
                 std::cout << "result: " << result << '\n';
             }
+            else if (handler_name == "boom") {
+                urpc2_rbk::call<void>(replier, "boom");            // -> RemoteError
+            }
+            else if (handler_name == "unknown") {
+                urpc2_rbk::call<void>(replier, "no_such_handler"); // -> UnknownOperation
+            }
             else {
                 std::cerr << "未知 handler: " << handler_name << '\n';
             }
         }
         catch (const std::exception& e) {
+            // urpc2 已把底层 Fast DDS 的 RpcException 都翻译成 std::exception 的子类
+            // (ServerNotFound / Timeout / UnknownOperation / RemoteError / ...), 故一个
+            // catch 即可兜住; e.what() 自带足够的定位信息.
             std::cerr << "error: " << e.what() << '\n';
         }
     }
