@@ -91,6 +91,70 @@ class urpc2::Urpc2::Impl {
     const Participant participant_;
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_;
     std::thread server_thread_;
+
+    /*
+     * Client-side 缓存.
+     *
+     * 出站调用不再按次创建/销毁 participant, 而是: 整个实例懒创建一个专用的
+     * client-side participant (首个出站调用时才建, 纯 server 实例零开销), 并按
+     * receiver name 缓存生成的 client.  每个 client 持有自己的 requester 和
+     * 收发线程, 天然支持并发挂起多个请求, 因此同一 receiver 的所有调用共享
+     * 一个 client 即可.  server 掉线重连由 DDS 发现自动重匹配, 缓存条目无需
+     * 失效处理.
+     *
+     * 不复用 server 侧的 participant_: DomainParticipant::create_service() 在
+     * 同名 service 已存在时会失败, 复用会让"调用与自己同名的实例"这一场景
+     * 直接建不出 client.
+     *
+     * 声明顺序即析构依赖: clients_ 中的 client 析构时要回到 client_participant_
+     * 上删除自己的 requester/service, 故 clients_ 声明在后, 先于 participant 析构.
+     */
+    std::mutex clients_mutex_;
+    Participant client_participant_;
+    std::map<std::string, std::shared_ptr<gen::Processor>> clients_;
+
+    /*
+     * 返回 receiver 对应的缓存 client, 缺失则创建并缓存.
+     *
+     * 创建放在锁内: 串行化并发的首次调用, 保证每个 receiver 至多建一个
+     * client.  任何本地失败 (工厂/participant/client) 统一翻译成 LocalError.
+     * 创建失败不留残余缓存条目, 下次调用会重试.
+     */
+    auto get_client(const std::string& receiver_name) -> std::shared_ptr<gen::Processor> {
+        const auto lock = std::lock_guard<std::mutex>{this->clients_mutex_};
+
+        const auto iter = this->clients_.find(receiver_name);
+        if (iter != this->clients_.end()) {
+            return iter->second;
+        }
+
+        std::shared_ptr<gen::Processor> client;
+        try {
+            if (!this->client_participant_) {
+                this->client_participant_ = Participant{create_participant()};
+            }
+            client = gen::create_ProcessorClient(
+                *this->client_participant_,
+                receiver_name.c_str(),
+                ::eprosima::fastdds::dds::RequesterQos{}
+            );
+        }
+        catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
+            throw urpc2::LocalError{
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
+        catch (const std::exception& e) {
+            throw urpc2::LocalError{
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+        }
+        if (!client) {
+            throw urpc2::LocalError{
+                "Failed to create Urpc2 client for instance \""s + receiver_name + '"'};
+        }
+
+        this->clients_.emplace(receiver_name, client);
+        return client;
+    }
   public:
     explicit Impl(const std::string& name)
     : name_{name},
@@ -163,29 +227,9 @@ class urpc2::Urpc2::Impl {
     ) -> std::string {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
-        // --- 建 client: 工厂/participant/client 任何本地失败统一成 LocalError ---
-        auto participant = Participant{};
-        std::shared_ptr<gen::Processor> client;
-        try {
-            participant = Participant{create_participant()};
-            client = gen::create_ProcessorClient(
-                *participant,
-                receiver_name.c_str(),
-                ::eprosima::fastdds::dds::RequesterQos{}
-            );
-        }
-        catch (const rpc::RpcException& e) {
-            throw urpc2::LocalError{
-                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
-        }
-        catch (const std::exception& e) {
-            throw urpc2::LocalError{
-                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
-        }
-        if (!client) {
-            throw urpc2::LocalError{
-                "Failed to create Urpc2 client for instance \""s + receiver_name + '"'};
-        }
+        // 取 (或懒创建) 该 receiver 的缓存 client; 本地失败在 get_client() 内
+        // 已统一翻译为 LocalError.
+        const auto client = this->get_client(receiver_name);
 
         // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
         // wait_for_matching —— 等 requester 与 replier 双向匹配上, 一旦匹配就立即
@@ -195,6 +239,9 @@ class urpc2::Urpc2::Impl {
         //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
         auto future = client->router(handler_name, args);
         if (future.wait_for(timeout) != std::future_status::ready) {
+            // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
+            // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
+            // 之后的调用 (每次请求有独立的 sample identity).
             throw urpc2::Timeout{
                 "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out"};
         }

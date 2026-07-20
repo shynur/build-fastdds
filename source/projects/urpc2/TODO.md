@@ -32,12 +32,8 @@
 `timeout` 参数分开.  由于 Fast DDS 生成的 client 未暴露该内部超时, 可能需要在
 发送前自行等待 requester 匹配到目标预算, 再调用 `router()`.
 
-## 3. 缓存 client participant / requester
+## 3. ~~缓存 client participant / requester~~ (已完成)
 
-现状: `call()` 每次都新建一个 `DomainParticipant` + client, 用完即毁.
-`DomainParticipant` 是较重的 DDS 对象, 按每次 RPC 创建/销毁是明显浪费.
-
-改进: 按目标 instance 名缓存 client (participant/requester), 跨多次 `call()` 复用
-(registry 里已经缓存了 server 端的 `Urpc2` 实例, client 载体可同理处理).  注意
-线程安全与生命周期 (参考 `urpc2_rbk.cpp` 里 registry「故意泄漏、永不析构」以规避
-Fast DDS 工厂单例析构顺序问题的做法).
+已在 trunk 实现: `Impl` 懒创建一个 client-side participant (首个出站调用时才建),
+并按 receiver name 缓存生成的 client, 跨多次 `call()` 复用; 创建在锁内串行化,
+失败不留缓存条目.  详见 `src/urpc2.cpp` 中 `get_client()` 及其块注释.

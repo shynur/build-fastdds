@@ -25,11 +25,13 @@ constexpr auto default_call_timeout = std::chrono::milliseconds{30000};
  *
  * serve() 按名字懒创建并缓存 urpc2::Urpc2 实例, 同名实例复用同一对象.
  *
- * call() 需要一个 urpc2::Urpc2 对象作为"载体"来触发其成员函数 call(); 而该
- * 成员函数内部会另建一个临时 participant 来生成 client, 与载体自身的
- * participant/server 无关.  因此任意一个实例都能充当载体: 优先复用某个已
- * serve 的实例以免多起一个空转 server, 纯调用方进程 (从不 serve) 才懒创建一个
- * 专用 client 实例.  该 client 的名字带上 PID, 以免与其它进程的 DDS 服务名冲突.
+ * call() 需要一个 urpc2::Urpc2 对象作为"载体"来触发其成员函数 call(); 该成员
+ * 函数内部使用 (并缓存) 载体自己的 client-side participant 与 client, 与载体
+ * 的 server-side participant 无关.  因此任意一个实例都能充当载体: 优先复用某个
+ * 已 serve 的实例以免多起一个空转 server, 纯调用方进程 (从不 serve) 才懒创建
+ * 一个专用 client 实例.  该 client 的名字带上 PID, 以免与其它进程的 DDS 服务名
+ * 冲突.  注意载体应保持稳定: 换载体调用同一 receiver 会在新载体上再建一套
+ * client 缓存.
  */
 struct Registry {
     std::mutex mutex;
