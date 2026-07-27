@@ -1,5 +1,6 @@
 #include "urpc2.hpp"
 
+#include <cstdlib>
 #include <future>
 #include <map>
 #include <memory>
@@ -26,15 +27,28 @@
 
 
 /*
- * 唯一允许通信的网段, 写死在代码里.
+ * 开启网段限制时, 唯一允许通信的网段.
  *
- * 部署形态是固定的: 库跑在小车内的三个控制器上, 控制器之间由我们手工组成
+ * 车上的部署形态是固定的: 库跑在小车内的三个控制器上, 控制器之间由我们手工组成
  * 192.168.192.0/24 这一个局域网.  除此之外的网卡 (车载 4G, 调试用的 Wi-Fi,
  * docker0 之类的虚拟网桥, 以及回环) 都不该承载 urpc2 流量: 既避免把内部 RPC
  * 和发现报文播到外部网络, 也避免 DDS 在多张网卡上重复发现, 匹配到错误的
- * locator.  因此不提供开关, 也不读环境变量/XML, 见 create_participant().
+ * locator.
  */
 static constexpr auto allowed_subnet_prefix = "192.168.192.";
+
+/*
+ * 判断是否启用上述网段限制: 环境变量 RBK_IN_CAR 存在且非空字符串时启用.
+ *
+ * 限制只在车上才成立, 而开发机, CI runner 和测试容器都没有 192.168.192.* 网卡,
+ * 无条件启用会让它们连 participant 都建不起来.  故以 RBK_IN_CAR 作为"当前跑在
+ * 车内"的标志: 车上的启动环境设置它, 其余环境不设置, 于是默认退回 Fast DDS 的
+ * builtin transport 行为 (所有网卡).
+ */
+static auto subnet_restriction_enabled() -> bool {
+    const auto *const in_car = std::getenv("RBK_IN_CAR");
+    return in_car != nullptr && in_car[0] != '\0';
+}
 
 /*
  * 收集本机属于 allowed_subnet_prefix 网段的 IPv4 地址.
@@ -59,16 +73,18 @@ static auto find_allowed_ipv4s() -> std::vector<std::string> {
 }
 
 /*
- * 创建被限制在 allowed_subnet_prefix 网段内通信的 participant.
+ * 创建 participant; 若 subnet_restriction_enabled(), 则限制在 allowed_subnet_prefix
+ * 网段内通信.
  *
- * 做法是关掉 builtin transport, 换成一个自建的 UDPv4 transport, 并把它的
+ * 限制的做法是关掉 builtin transport, 换成一个自建的 UDPv4 transport, 并把它的
  * interface allowlist 填成本机在该网段上的地址.  allowlist 同时约束收和发,
  * 于是用户数据和 builtin 的发现报文 (含发现用的多播) 都只经过这张网卡.
  * 另外打开 ignore_non_matching_locators, 丢弃对端宣告的、本机 transport 无法
  * 匹配的 locator, 避免为网段外的地址保留无用的 sender resource.
  *
- * 本机在该网段上没有地址时直接失败, 而不是静默退回到"所有网卡": 后者会让配错
- * 网络的控制器看起来能通, 却把报文发到了不该去的地方, 排查成本远高于启动即报错.
+ * 启用限制而本机在该网段上没有地址时直接失败, 而不是静默退回到"所有网卡":
+ * 后者会让配错网络的控制器看起来能通, 却把报文发到了不该去的地方, 排查成本
+ * 远高于启动即报错.  未启用限制时用默认 QoS, 即 Fast DDS 原本的所有网卡行为.
  */
 static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
     const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
@@ -76,21 +92,24 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
         throw std::runtime_error{"Failed to get Fast DDS participant factory"};
     }
 
-    const auto addresses = find_allowed_ipv4s();
-    if (addresses.empty()) {
-        throw std::runtime_error{
-            "No local network interface in "s + allowed_subnet_prefix
-            + "0/24; urpc2 only communicates on that subnet"};
-    }
-
     auto qos = ::eprosima::fastdds::dds::DomainParticipantQos{};
-    const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
-    for (const auto& address: addresses) {
-        udp->interface_allowlist.emplace_back(address);
+    if (subnet_restriction_enabled()) {
+        const auto addresses = find_allowed_ipv4s();
+        if (addresses.empty()) {
+            throw std::runtime_error{
+                "RBK_IN_CAR is set but no local network interface is in "s
+                + allowed_subnet_prefix
+                + "0/24; urpc2 only communicates on that subnet in the car"};
+        }
+
+        const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
+        for (const auto& address: addresses) {
+            udp->interface_allowlist.emplace_back(address);
+        }
+        qos.transport().use_builtin_transports = false;
+        qos.transport().user_transports.push_back(udp);
+        qos.wire_protocol().ignore_non_matching_locators = true;
     }
-    qos.transport().use_builtin_transports = false;
-    qos.transport().user_transports.push_back(udp);
-    qos.wire_protocol().ignore_non_matching_locators = true;
 
     auto *const participant = factory->create_participant(0, qos);
     if (participant == nullptr) {
