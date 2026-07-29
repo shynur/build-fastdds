@@ -56,6 +56,11 @@ namespace urpc2_detail {
         return colors_enabled() ? code : "";
     }
 
+    static auto stderr_mutex() noexcept -> std::mutex& {
+        static std::mutex m;
+        return m;
+    }
+
     static auto styled(std::string text, const char *const code) -> std::string {
         if (!colors_enabled()) {
             return text;
@@ -134,6 +139,7 @@ namespace urpc2_detail {
         const auto *const italic = style_code(ansi_italic);
         const auto *const info = style_code(ansi_bold_green);
 
+        const auto lock = std::lock_guard<std::mutex>{stderr_mutex()};
         std::fprintf(
             stderr,
             "%s%.11s%s%s%.8s%s%s%s%s %s[INFO]%s urpc2 - "
@@ -159,7 +165,6 @@ namespace urpc2_detail {
             message.c_str(),
             reset
         );
-        std::fflush(stderr);
     }
 
     static void log_exception(
@@ -178,6 +183,7 @@ namespace urpc2_detail {
         const auto *const italic = style_code(ansi_italic);
         const auto *const error = style_code(ansi_bold_red);
 
+        const auto lock = std::lock_guard<std::mutex>{stderr_mutex()};
         std::fprintf(
             stderr,
             "%s%.11s%s%s%.8s%s%s%s%s %s[ERROR]%s urpc2 - "
@@ -207,7 +213,6 @@ namespace urpc2_detail {
             message.c_str(),
             reset
         );
-        std::fflush(stderr);
     }
 
 }
@@ -257,11 +262,17 @@ static constexpr auto allowed_subnet_prefix = "192.168.192.";
  */
 static auto subnet_restriction_enabled() -> bool {
     const auto *const in_car = std::getenv("RBK_IN_CAR");
-    URPC2_LOG_INFO(
-        urpc2_detail::entity("RBK_IN_CAR") + '='
-        + urpc2_detail::value(in_car == nullptr ? "" : in_car)
-    );
-    return in_car != nullptr && in_car[0] != '\0';
+    const auto present = in_car != nullptr && in_car[0] != '\0';
+    static std::once_flag subnet_log_once;
+    std::call_once(subnet_log_once, [present] {
+        URPC2_LOG_INFO(
+            std::string{"subnet_restriction: "}
+            + (present
+                ? urpc2_detail::value("RBK_IN_CAR=present")
+                : urpc2_detail::value("RBK_IN_CAR=absent"))
+        );
+    });
+    return present;
 }
 
 /*
@@ -537,17 +548,15 @@ class urpc2::Urpc2::Impl {
     ) -> std::string {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
+        const auto client = this->get_client(receiver_name);
+
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
             + urpc2_detail::action("call") + " \""
             + urpc2_detail::entity(receiver_name + '.' + handler_name)
-            + "\": args=" + urpc2_detail::argument(args)
+            + "\": args_len=" + urpc2_detail::value(std::to_string(args.size()))
             + ", timeout=" + urpc2_detail::value(std::to_string(timeout.count()) + 's')
         );
-
-        // 取 (或懒创建) 该 receiver 的缓存 client; 本地失败在 get_client() 内
-        // 已统一翻译为 LocalError.
-        const auto client = this->get_client(receiver_name);
 
         // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
         // wait_for_matching —— 等 requester 与 replier 双向匹配上, 一旦匹配就立即
@@ -560,6 +569,12 @@ class urpc2::Urpc2::Impl {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
             // 之后的调用 (每次请求有独立的 sample identity).
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=Timeout"
+            );
             URPC2_THROW(
                 urpc2::Timeout,
                 "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out"
@@ -576,12 +591,19 @@ class urpc2::Urpc2::Impl {
                 "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
                 + urpc2_detail::action("received response from") + " \""
                 + urpc2_detail::entity(receiver_name + '.' + handler_name) + "\": "
-                + urpc2_detail::argument(args) + ' ' + urpc2_detail::separator("->") + ' '
-                + urpc2_detail::response(response)
+                + urpc2_detail::value("args_len=" + std::to_string(args.size())) + ' '
+                + urpc2_detail::separator("->") + ' '
+                + urpc2_detail::value("response_len=" + std::to_string(response.size()))
             );
             return response;
         }
         catch (const rpc::RemoteUnknownOperationError& e) {
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=UnknownOperation"
+            );
             URPC2_THROW(
                 urpc2::UnknownOperation,
                 "No such handler \""s + handler_name + "\" on instance \"" + receiver_name + "\" (" + e.what() + ')'
@@ -589,12 +611,24 @@ class urpc2::Urpc2::Impl {
         }
         catch (const rpc::RpcBrokenPipeException& e) {
             // client 侧的 broken pipe 只源于「发请求时 requester 未匹配」, 即目标未被发现.
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=ServerNotFound"
+            );
             URPC2_THROW(
                 urpc2::ServerNotFound,
                 "No Urpc2 server discovered for instance \""s + receiver_name + "\" (" + e.what() + ')'
             );
         }
         catch (const rpc::RpcTimeoutException& e) {
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=Timeout"
+            );
             URPC2_THROW(
                 urpc2::Timeout,
                 "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out (" + e.what() + ')'
@@ -602,6 +636,12 @@ class urpc2::Urpc2::Impl {
         }
         catch (const rpc::RpcRemoteException& e) {
             // 其余远端错误 (invalid argument / unsupported / out of resources / unknown exception).
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=RemoteError"
+            );
             URPC2_THROW(
                 urpc2::RemoteError,
                 "Remote error from instance \""s + receiver_name + "\" (" + e.what() + ')'
@@ -609,6 +649,12 @@ class urpc2::Urpc2::Impl {
         }
         catch (const rpc::RpcException& e) {
             // 兜底: 任何未预料的 RpcException, 降级为根 Error, 保留消息, 绝不外泄或 terminate.
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("failed call") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name)
+                + "\" kind=Error"
+            );
             URPC2_THROW(
                 urpc2::Error,
                 "Urpc2 RPC error on instance \""s + receiver_name + "\" (" + e.what() + ')'
@@ -619,7 +665,8 @@ class urpc2::Urpc2::Impl {
     auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
-            + urpc2_detail::action("received call") + ": args=" + urpc2_detail::argument(args)
+            + urpc2_detail::action("received call") + ": args_len="
+            + urpc2_detail::value(std::to_string(args.size()))
         );
 
         const std::shared_ptr<Handler> handler = [&] {
@@ -634,11 +681,39 @@ class urpc2::Urpc2::Impl {
             }
             return iter->second;
         }();
-        auto response = (*handler)(args);
+        std::string response;
+        try {
+            response = (*handler)(args);
+        }
+        catch (const std::exception& e) {
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
+                + urpc2_detail::action("failed handler")
+                + ": type=" + urpc2_detail::value(typeid(e).name())
+                + ", msg=" + urpc2_detail::value(e.what())
+            );
+            URPC2_THROW(
+                urpc2::RemoteError,
+                "Handler \""s + handler_name + "\" threw: " + e.what()
+            );
+        }
+        catch (...) {
+            URPC2_LOG_INFO(
+                "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
+                + urpc2_detail::action("failed handler")
+                + ": type=" + urpc2_detail::value("non-std exception")
+            );
+            URPC2_THROW(
+                urpc2::RemoteError,
+                "Handler \""s + handler_name + "\" threw a non-std exception"
+            );
+        }
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
-            + urpc2_detail::action("completed call") + ": " + urpc2_detail::argument(args)
-            + ' ' + urpc2_detail::separator("->") + ' ' + urpc2_detail::response(response)
+            + urpc2_detail::action("completed call") + ": "
+            + urpc2_detail::value("args_len=" + std::to_string(args.size())) + ' '
+            + urpc2_detail::separator("->") + ' '
+            + urpc2_detail::value("response_len=" + std::to_string(response.size()))
         );
         return response;
     }

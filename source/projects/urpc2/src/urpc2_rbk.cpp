@@ -90,7 +90,7 @@ void serve_handler(
 auto call_raw(
     const std::string& instance_name,
     const std::string& handler_name,
-    const std::string& args_json
+    const std::string& args_cbor
 ) -> std::string {
     ::urpc2::Urpc2* vehicle = nullptr;
     {
@@ -106,7 +106,7 @@ auto call_raw(
             vehicle = reg.client.get();
         }
     }
-    return vehicle->call(instance_name, handler_name, args_json, default_call_timeout);
+    return vehicle->call(instance_name, handler_name, args_cbor, default_call_timeout);
 }
 
 }}  // namespace urpc2_rbk::detail

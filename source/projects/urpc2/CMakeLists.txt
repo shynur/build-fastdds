@@ -95,6 +95,9 @@ target_link_libraries(urpc2_mesh_node urpc2)
 add_executable(urpc2_mesh_node_rbk examples/mesh_node_rbk.cpp)
 target_link_libraries(urpc2_mesh_node_rbk urpc2_rbk)
 
+add_executable(urpc2_binary_passthrough examples/binary_passthrough.cpp)
+target_link_libraries(urpc2_binary_passthrough urpc2)
+
 
 
 
