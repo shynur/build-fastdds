@@ -510,7 +510,12 @@ class urpc2::Urpc2::Impl {
             }
             return iter->second;
         }();
-        return (*handler)(args);
+        auto response = (*handler)(args);
+        URPC2_LOG_INFO(
+            "Instance \""s + this->name_ + '.' + handler_name + "\" completed call: " + args
+            + " -> " + response
+        );
+        return response;
     }
 };
 
