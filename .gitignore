@@ -5,6 +5,7 @@
 /source/deb-x64/
 /source/deb-arm64/
 /source/*.deb
+.ccb
 
 # foonathan_memory 源码: 由 scripts/fetch-foonathan.bash 于 CI 期动态 clone, 不入库.
 /source/third_party/foonathan_memory/
