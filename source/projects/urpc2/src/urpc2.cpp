@@ -403,8 +403,10 @@ class urpc2::Urpc2::Impl {
         {
             "hi",
             std::make_shared<Handler>(
-                [this](const std::string num) {
-                    return '"' + "Hi, here's ["s + this->name_ + "].  Got "s + num + "~" + '"';
+                [this](const std::vector<uint8_t> num) {
+                    const auto num_str = std::string(num.begin(), num.end());
+                    const auto response = '"' + "Hi, here's ["s + this->name_ + "].  Got "s + num_str + "~" + '"';
+                    return std::vector<uint8_t>(response.begin(), response.end());
                 }
             )
         }
