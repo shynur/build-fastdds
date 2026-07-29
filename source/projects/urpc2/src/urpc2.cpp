@@ -1,6 +1,9 @@
 #include "urpc2.hpp"
 
+#include <chrono>
+#include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <future>
 #include <map>
 #include <memory>
@@ -24,6 +27,72 @@
 #include "types/processor.hpp"
 #include "types/processorClient.hpp"
 #include "types/processorServer.hpp"
+
+namespace urpc2_detail {
+    static void log_exception(
+        const char *const file,
+        const int line,
+        const char *const function,
+        const char *const exception_class,
+        const std::string& message
+    ) noexcept {
+        const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        auto local_time = std::tm{};
+        char date_time[20]{};
+        char utc_offset[6]{};
+        char timestamp[32]{};
+
+        if (
+            localtime_r(&now, &local_time) != nullptr
+            && std::strftime(date_time, sizeof(date_time), "%Y-%m-%dT%H:%M:%S", &local_time) != 0
+            && std::strftime(utc_offset, sizeof(utc_offset), "%z", &local_time) == 5
+        ) {
+            std::snprintf(
+                timestamp,
+                sizeof(timestamp),
+                "%s%c%c%c:%c%c",
+                date_time,
+                utc_offset[0],
+                utc_offset[1],
+                utc_offset[2],
+                utc_offset[3],
+                utc_offset[4]
+            );
+        }
+        else {
+            std::snprintf(timestamp, sizeof(timestamp), "1970-01-01T00:00:00+00:00");
+        }
+
+        std::fprintf(
+            stderr,
+            "%s [ERROR] urpc2 - %s: line %d: %s: %s{%s}\n",
+            timestamp,
+            file,
+            line,
+            function,
+            exception_class,
+            message.c_str()
+        );
+        std::fflush(stderr);
+    }
+
+}
+
+#define URPC2_THROW(exception_class, message) \
+    do { \
+        auto urpc2_exception_message = std::string{message}; \
+        ::urpc2_detail::log_exception( \
+            __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        throw exception_class{std::move(urpc2_exception_message)}; \
+    } while (false)
+
+#define URPC2_THROW_C_STRING(exception_class, message) \
+    do { \
+        const auto urpc2_exception_message = std::string{message}; \
+        ::urpc2_detail::log_exception( \
+            __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        throw exception_class{urpc2_exception_message.c_str()}; \
+    } while (false)
 
 
 /*
@@ -89,17 +158,19 @@ static auto find_allowed_ipv4s() -> std::vector<std::string> {
 static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
     const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
     if (!factory) {
-        throw std::runtime_error{"Failed to get Fast DDS participant factory"};
+        URPC2_THROW(std::runtime_error, "Failed to get Fast DDS participant factory");
     }
 
     auto qos = ::eprosima::fastdds::dds::DomainParticipantQos{};
     if (subnet_restriction_enabled()) {
         const auto addresses = find_allowed_ipv4s();
         if (addresses.empty()) {
-            throw std::runtime_error{
+            URPC2_THROW(
+                std::runtime_error,
                 "RBK_IN_CAR is set but no local network interface is in "s
                 + allowed_subnet_prefix
-                + "0/24; urpc2 only communicates on that subnet in the car"};
+                + "0/24; urpc2 only communicates on that subnet in the car"
+            );
         }
 
         const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
@@ -113,7 +184,7 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
 
     auto *const participant = factory->create_participant(0, qos);
     if (participant == nullptr) {
-        throw std::runtime_error{"Failed to create Fast DDS participant"};
+        URPC2_THROW(std::runtime_error, "Failed to create Fast DDS participant");
     }
     return participant;
 }
@@ -224,16 +295,22 @@ class urpc2::Urpc2::Impl {
             );
         }
         catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
-            throw urpc2::LocalError{
-                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::LocalError,
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'
+            );
         }
         catch (const std::exception& e) {
-            throw urpc2::LocalError{
-                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::LocalError,
+                "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'
+            );
         }
         if (!client) {
-            throw urpc2::LocalError{
-                "Failed to create Urpc2 client for instance \""s + receiver_name + '"'};
+            URPC2_THROW(
+                urpc2::LocalError,
+                "Failed to create Urpc2 client for instance \""s + receiver_name + '"'
+            );
         }
 
         this->clients_.emplace(receiver_name, client);
@@ -254,7 +331,7 @@ class urpc2::Urpc2::Impl {
                   router
               );
               if (!server) {
-                  throw std::runtime_error{"Failed to create Urpc2 server"};
+                  URPC2_THROW(std::runtime_error, "Failed to create Urpc2 server");
               }
               return server;
           }()
@@ -295,7 +372,7 @@ class urpc2::Urpc2::Impl {
      */
     void register_handler(const std::string& handler_name, Handler handler) {
         if (!handler) {
-            throw std::invalid_argument{"Handler must be callable"};
+            URPC2_THROW(std::invalid_argument, "Handler must be callable");
         }
         {
             const auto lock = std::lock_guard<std::mutex>{this->handlers_mutex_};
@@ -326,8 +403,10 @@ class urpc2::Urpc2::Impl {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
             // 之后的调用 (每次请求有独立的 sample identity).
-            throw urpc2::Timeout{
-                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out"};
+            URPC2_THROW(
+                urpc2::Timeout,
+                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out"
+            );
         }
 
         // future.get() 会 rethrow 存进 promise 的 Fast DDS RpcException 子类. 在此
@@ -338,27 +417,37 @@ class urpc2::Urpc2::Impl {
             return future.get();
         }
         catch (const rpc::RemoteUnknownOperationError& e) {
-            throw urpc2::UnknownOperation{
-                "No such handler \""s + handler_name + "\" on instance \"" + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::UnknownOperation,
+                "No such handler \""s + handler_name + "\" on instance \"" + receiver_name + "\" (" + e.what() + ')'
+            );
         }
         catch (const rpc::RpcBrokenPipeException& e) {
             // client 侧的 broken pipe 只源于「发请求时 requester 未匹配」, 即目标未被发现.
-            throw urpc2::ServerNotFound{
-                "No Urpc2 server discovered for instance \""s + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::ServerNotFound,
+                "No Urpc2 server discovered for instance \""s + receiver_name + "\" (" + e.what() + ')'
+            );
         }
         catch (const rpc::RpcTimeoutException& e) {
-            throw urpc2::Timeout{
-                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::Timeout,
+                "Urpc2 call to \""s + receiver_name + "\"/\"" + handler_name + "\" timed out (" + e.what() + ')'
+            );
         }
         catch (const rpc::RpcRemoteException& e) {
             // 其余远端错误 (invalid argument / unsupported / out of resources / unknown exception).
-            throw urpc2::RemoteError{
-                "Remote error from instance \""s + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::RemoteError,
+                "Remote error from instance \""s + receiver_name + "\" (" + e.what() + ')'
+            );
         }
         catch (const rpc::RpcException& e) {
             // 兜底: 任何未预料的 RpcException, 降级为根 Error, 保留消息, 绝不外泄或 terminate.
-            throw urpc2::Error{
-                "Urpc2 RPC error on instance \""s + receiver_name + "\" (" + e.what() + ')'};
+            URPC2_THROW(
+                urpc2::Error,
+                "Urpc2 RPC error on instance \""s + receiver_name + "\" (" + e.what() + ')'
+            );
         }
     }
 
@@ -368,7 +457,10 @@ class urpc2::Urpc2::Impl {
             const auto iter = this->handlers_.find(handler_name);
             if (iter == this->handlers_.end()) {
                 const auto message = "No such Urpc2 handler: "s + handler_name;
-                throw ::eprosima::fastdds::dds::rpc::RemoteUnknownOperationError{message.c_str()};
+                URPC2_THROW_C_STRING(
+                    ::eprosima::fastdds::dds::rpc::RemoteUnknownOperationError,
+                    message
+                );
             }
             return iter->second;
         }();
