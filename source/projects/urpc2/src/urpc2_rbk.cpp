@@ -90,8 +90,8 @@ void serve_handler(
 auto call_raw(
     const std::string& instance_name,
     const std::string& handler_name,
-    const std::vector<uint8_t>& args_cbor
-) -> std::vector<uint8_t> {
+    const std::vector<std::uint8_t>& args_cbor
+) -> std::vector<std::uint8_t> {
     ::urpc2::Urpc2* vehicle = nullptr;
     {
         auto& reg = registry();

@@ -389,9 +389,9 @@ class urpc2::Urpc2::Impl {
         Impl& owner_;
       public:
         explicit Router(Impl& owner): owner_{owner} {}
-        std::vector<uint8_t> router(
+        std::vector<std::uint8_t> router(
             const ::eprosima::fastdds::dds::rpc::RpcRequest&,
-            const std::string& handler_name, const std::vector<uint8_t>& args
+            const std::string& handler_name, const std::vector<std::uint8_t>& args
         ) override {
             return this->owner_.dispatch(handler_name, args);
         }
@@ -554,9 +554,9 @@ class urpc2::Urpc2::Impl {
     auto call(
         const std::string& receiver_name,
         const std::string& handler_name,
-        const std::vector<uint8_t>& args,
+        const std::vector<std::uint8_t>& args,
         const std::chrono::duration<double> timeout
-    ) -> std::vector<uint8_t> {
+    ) -> std::vector<std::uint8_t> {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
         URPC2_LOG_INFO(
@@ -639,7 +639,7 @@ class urpc2::Urpc2::Impl {
         }
     }
 
-    auto dispatch(const std::string& handler_name, const std::vector<uint8_t>& args) const -> std::vector<uint8_t> {
+    auto dispatch(const std::string& handler_name, const std::vector<std::uint8_t>& args) const -> std::vector<std::uint8_t> {
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
             + urpc2_detail::action("received call") + ": args="
@@ -681,8 +681,8 @@ void urpc2::Urpc2::register_handler(const std::string& handler_name, Handler han
 auto urpc2::Urpc2::call(
     const std::string& receiver_name,
     const std::string& handler_name,
-    const std::vector<uint8_t>& args,
+    const std::vector<std::uint8_t>& args,
     const std::chrono::duration<double> timeout
-) -> std::vector<uint8_t> {
+) -> std::vector<std::uint8_t> {
     return this->impl_->call(receiver_name, handler_name, args, timeout);
 }

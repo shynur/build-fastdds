@@ -84,14 +84,14 @@ namespace urpc2 {
  * 而调用方以最先到达的那条响应 resolve, 其余响应被丢弃.
  * 注意: 由于同名实例各自维护独立的处理器表, 它们注册的 handler 集合可能不同.
  *
- * 框架将请求体和响应体视为不透明二进制数据 (std::vector<uint8_t>).  上层封装
+ * 框架将请求体和响应体视为不透明二进制数据 (std::vector<std::uint8_t>).  上层封装
  * (如 urpc2_rbk) 使用 CBOR 序列化, 但 Urpc2 本身不解析或校验 payload.
  */
 class urpc2::Urpc2 {
     class Impl;
     std::unique_ptr<Impl> impl_;
   public:
-    using Handler = std::function<std::vector<uint8_t>(std::vector<uint8_t>)>;
+    using Handler = std::function<std::vector<std::uint8_t>(std::vector<std::uint8_t>)>;
 
     /**
      * @param name (DDS domain 内的 service name) 当成目标地址的 name 理解即可
@@ -125,7 +125,7 @@ class urpc2::Urpc2 {
     auto call(
         const std::string& receiver_name,
         const std::string& handler_name,
-        const std::vector<uint8_t>& args,
+        const std::vector<std::uint8_t>& args,
         std::chrono::duration<double> timeout
-    ) -> std::vector<uint8_t>;
+    ) -> std::vector<std::uint8_t>;
 };

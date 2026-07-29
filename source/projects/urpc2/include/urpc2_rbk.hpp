@@ -55,8 +55,8 @@ void serve_handler(
 auto call_raw(
     const std::string& instance_name,
     const std::string& handler_name,
-    const std::vector<uint8_t>& args_cbor
-) -> std::vector<uint8_t>;
+    const std::vector<std::uint8_t>& args_cbor
+) -> std::vector<std::uint8_t>;
 
 /*
  * 把 CBOR array 中的元素按位置解包成 @p A... 各参数, 调用 @p fn, 再把结果
@@ -67,7 +67,7 @@ auto invoke_from_cbor(
     const std::function<R(A...)>& fn,
     const ::nlohmann::json& args,
     std::index_sequence<I...>
-) -> std::vector<uint8_t> {
+) -> std::vector<std::uint8_t> {
     (void)args;  // 零参处理器不会索引 args.
     if constexpr (std::is_void_v<R>) {
         fn(args.at(I).template get<std::decay_t<A>>()...);
@@ -104,10 +104,10 @@ void serve(
     detail::serve_handler(
         instance_name,
         handler_name,
-        [fn = std::move(raw_handler)](std::vector<uint8_t> args_cbor) -> std::vector<uint8_t> {
-            // 将 vector<uint8_t> (CBOR) 解析为 JSON
+        [fn = std::move(raw_handler)](std::vector<std::uint8_t> args_cbor) -> std::vector<std::uint8_t> {
+            // 将 vector<std::uint8_t> (CBOR) 解析为 JSON
             const auto args = ::nlohmann::json::from_cbor(args_cbor);
-            // 调用用户 handler 并将结果序列化为 CBOR (直接返回 vector<uint8_t>)
+            // 调用用户 handler 并将结果序列化为 CBOR (直接返回 vector<std::uint8_t>)
             return detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
         });
 }
