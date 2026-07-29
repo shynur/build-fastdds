@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include <unistd.h>
+
 #include <fastdds/dds/domain/DomainParticipant.hpp>
 #include <fastdds/dds/domain/DomainParticipantFactory.hpp>
 #include <fastdds/dds/domain/qos/DomainParticipantQos.hpp>
@@ -29,6 +31,66 @@
 #include "types/processorServer.hpp"
 
 namespace urpc2_detail {
+    static constexpr auto ansi_reset = "\033[0m";
+    static constexpr auto ansi_bold = "\033[1m";
+    static constexpr auto ansi_dim = "\033[2m";
+    static constexpr auto ansi_italic = "\033[3m";
+    static constexpr auto ansi_underline = "\033[4m";
+    static constexpr auto ansi_bold_red = "\033[1;31m";
+    static constexpr auto ansi_bold_green = "\033[1;32m";
+    static constexpr auto ansi_bold_cyan = "\033[1;36m";
+    static constexpr auto ansi_green = "\033[32m";
+    static constexpr auto ansi_yellow = "\033[33m";
+    static constexpr auto ansi_magenta = "\033[35m";
+
+    static auto colors_enabled() noexcept -> bool {
+        static const auto enabled = [] {
+            const auto *const no_color = std::getenv("NO_COLOR");
+            return (no_color == nullptr || no_color[0] == '\0')
+                && ::isatty(::fileno(stderr)) != 0;
+        }();
+        return enabled;
+    }
+
+    static auto style_code(const char *const code) noexcept -> const char * {
+        return colors_enabled() ? code : "";
+    }
+
+    static auto styled(std::string text, const char *const code) -> std::string {
+        if (!colors_enabled()) {
+            return text;
+        }
+
+        auto result = std::string{code};
+        result += text;
+        result += ansi_reset;
+        return result;
+    }
+
+    static auto action(std::string text) -> std::string {
+        return styled(std::move(text), ansi_bold_cyan);
+    }
+
+    static auto entity(std::string text) -> std::string {
+        return styled(std::move(text), ansi_underline);
+    }
+
+    static auto argument(std::string text) -> std::string {
+        return styled(std::move(text), ansi_yellow);
+    }
+
+    static auto response(std::string text) -> std::string {
+        return styled(std::move(text), ansi_green);
+    }
+
+    static auto value(std::string text) -> std::string {
+        return styled(std::move(text), ansi_magenta);
+    }
+
+    static auto separator(std::string text) -> std::string {
+        return styled(std::move(text), ansi_dim);
+    }
+
     static void format_timestamp(char (&timestamp)[32]) noexcept {
         const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         auto local_time = std::tm{};
@@ -66,14 +128,36 @@ namespace urpc2_detail {
         char timestamp[32]{};
         format_timestamp(timestamp);
 
+        const auto *const reset = style_code(ansi_reset);
+        const auto *const bold = style_code(ansi_bold);
+        const auto *const dim = style_code(ansi_dim);
+        const auto *const italic = style_code(ansi_italic);
+        const auto *const info = style_code(ansi_bold_green);
+
         std::fprintf(
             stderr,
-            "%s [INFO] urpc2 - %s: line %d: %s: %s\n",
+            "%s%.11s%s%s%.8s%s%s%s%s %s[INFO]%s urpc2 - "
+            "%s%s: line %d:%s %s%s%s: %s%s\n",
+            dim,
             timestamp,
+            reset,
+            bold,
+            timestamp + 11,
+            reset,
+            dim,
+            timestamp + 19,
+            reset,
+            info,
+            reset,
+            dim,
             file,
             line,
+            reset,
+            italic,
             function,
-            message.c_str()
+            reset,
+            message.c_str(),
+            reset
         );
         std::fflush(stderr);
     }
@@ -88,15 +172,40 @@ namespace urpc2_detail {
         char timestamp[32]{};
         format_timestamp(timestamp);
 
+        const auto *const reset = style_code(ansi_reset);
+        const auto *const bold = style_code(ansi_bold);
+        const auto *const dim = style_code(ansi_dim);
+        const auto *const italic = style_code(ansi_italic);
+        const auto *const error = style_code(ansi_bold_red);
+
         std::fprintf(
             stderr,
-            "%s [ERROR] urpc2 - %s: line %d: %s: %s{%s}\n",
+            "%s%.11s%s%s%.8s%s%s%s%s %s[ERROR]%s urpc2 - "
+            "%s%s: line %d:%s %s%s%s: %s%s%s{%s%s%s}\n",
+            dim,
             timestamp,
+            reset,
+            bold,
+            timestamp + 11,
+            reset,
+            dim,
+            timestamp + 19,
+            reset,
+            error,
+            reset,
+            dim,
             file,
             line,
+            reset,
+            italic,
             function,
+            reset,
+            error,
             exception_class,
-            message.c_str()
+            reset,
+            error,
+            message.c_str(),
+            reset
         );
         std::fflush(stderr);
     }
@@ -148,7 +257,10 @@ static constexpr auto allowed_subnet_prefix = "192.168.192.";
  */
 static auto subnet_restriction_enabled() -> bool {
     const auto *const in_car = std::getenv("RBK_IN_CAR");
-    URPC2_LOG_INFO("RBK_IN_CAR="s + (in_car == nullptr ? "" : in_car));
+    URPC2_LOG_INFO(
+        urpc2_detail::entity("RBK_IN_CAR") + '='
+        + urpc2_detail::value(in_car == nullptr ? "" : in_car)
+    );
     return in_car != nullptr && in_car[0] != '\0';
 }
 
@@ -412,7 +524,8 @@ class urpc2::Urpc2::Impl {
             this->handlers_[handler_name] = std::make_shared<Handler>(std::move(handler));
         }
         URPC2_LOG_INFO(
-            "Registered handler \""s + this->name_ + '.' + handler_name + '"'
+            urpc2_detail::action("Registered") + " handler \""
+            + urpc2_detail::entity(this->name_ + '.' + handler_name) + '"'
         );
     }
 
@@ -425,9 +538,11 @@ class urpc2::Urpc2::Impl {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
         URPC2_LOG_INFO(
-            "Instance \""s + this->name_ + "\" call \"" + receiver_name + '.' + handler_name
-            + "\": args=" + args
-            + ", timeout=" + std::to_string(timeout.count()) + 's'
+            "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+            + urpc2_detail::action("call") + " \""
+            + urpc2_detail::entity(receiver_name + '.' + handler_name)
+            + "\": args=" + urpc2_detail::argument(args)
+            + ", timeout=" + urpc2_detail::value(std::to_string(timeout.count()) + 's')
         );
 
         // 取 (或懒创建) 该 receiver 的缓存 client; 本地失败在 get_client() 内
@@ -458,8 +573,11 @@ class urpc2::Urpc2::Impl {
         try {
             auto response = future.get();
             URPC2_LOG_INFO(
-                "Instance \""s + this->name_ + "\" received response from \"" + receiver_name + '.'
-                + handler_name + "\": " + args + " -> " + response
+                "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
+                + urpc2_detail::action("received response from") + " \""
+                + urpc2_detail::entity(receiver_name + '.' + handler_name) + "\": "
+                + urpc2_detail::argument(args) + ' ' + urpc2_detail::separator("->") + ' '
+                + urpc2_detail::response(response)
             );
             return response;
         }
@@ -500,7 +618,8 @@ class urpc2::Urpc2::Impl {
 
     auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {
         URPC2_LOG_INFO(
-            "Instance \""s + this->name_ + '.' + handler_name + "\" received call: args=" + args
+            "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
+            + urpc2_detail::action("received call") + ": args=" + urpc2_detail::argument(args)
         );
 
         const std::shared_ptr<Handler> handler = [&] {
@@ -517,8 +636,9 @@ class urpc2::Urpc2::Impl {
         }();
         auto response = (*handler)(args);
         URPC2_LOG_INFO(
-            "Instance \""s + this->name_ + '.' + handler_name + "\" completed call: " + args
-            + " -> " + response
+            "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
+            + urpc2_detail::action("completed call") + ": " + urpc2_detail::argument(args)
+            + ' ' + urpc2_detail::separator("->") + ' ' + urpc2_detail::response(response)
         );
         return response;
     }
