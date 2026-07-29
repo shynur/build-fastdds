@@ -29,18 +29,11 @@
 #include "types/processorServer.hpp"
 
 namespace urpc2_detail {
-    static void log_exception(
-        const char *const file,
-        const int line,
-        const char *const function,
-        const char *const exception_class,
-        const std::string& message
-    ) noexcept {
+    static void format_timestamp(char (&timestamp)[32]) noexcept {
         const auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         auto local_time = std::tm{};
         char date_time[20]{};
         char utc_offset[6]{};
-        char timestamp[32]{};
 
         if (
             localtime_r(&now, &local_time) != nullptr
@@ -62,6 +55,38 @@ namespace urpc2_detail {
         else {
             std::snprintf(timestamp, sizeof(timestamp), "1970-01-01T00:00:00+00:00");
         }
+    }
+
+    static void log_info(
+        const char *const file,
+        const int line,
+        const char *const function,
+        const std::string& message
+    ) noexcept {
+        char timestamp[32]{};
+        format_timestamp(timestamp);
+
+        std::fprintf(
+            stderr,
+            "%s [INFO] urpc2 - %s: line %d: %s: %s\n",
+            timestamp,
+            file,
+            line,
+            function,
+            message.c_str()
+        );
+        std::fflush(stderr);
+    }
+
+    static void log_exception(
+        const char *const file,
+        const int line,
+        const char *const function,
+        const char *const exception_class,
+        const std::string& message
+    ) noexcept {
+        char timestamp[32]{};
+        format_timestamp(timestamp);
 
         std::fprintf(
             stderr,
@@ -77,6 +102,13 @@ namespace urpc2_detail {
     }
 
 }
+
+#define URPC2_LOG_INFO(message) \
+    do { \
+        const auto urpc2_log_message = std::string{message}; \
+        ::urpc2_detail::log_info( \
+            __FILE__, __LINE__, __PRETTY_FUNCTION__, urpc2_log_message); \
+    } while (false)
 
 #define URPC2_THROW(exception_class, message) \
     do { \
@@ -116,6 +148,7 @@ static constexpr auto allowed_subnet_prefix = "192.168.192.";
  */
 static auto subnet_restriction_enabled() -> bool {
     const auto *const in_car = std::getenv("RBK_IN_CAR");
+    URPC2_LOG_INFO("RBK_IN_CAR="s + (in_car == nullptr ? "" : in_car));
     return in_car != nullptr && in_car[0] != '\0';
 }
 
@@ -378,6 +411,9 @@ class urpc2::Urpc2::Impl {
             const auto lock = std::lock_guard<std::mutex>{this->handlers_mutex_};
             this->handlers_[handler_name] = std::make_shared<Handler>(std::move(handler));
         }
+        URPC2_LOG_INFO(
+            "Registered handler \""s + this->name_ + '.' + handler_name + '"'
+        );
     }
 
     auto call(
@@ -387,6 +423,12 @@ class urpc2::Urpc2::Impl {
         const std::chrono::duration<double> timeout
     ) -> std::string {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
+
+        URPC2_LOG_INFO(
+            "Instance \""s + this->name_ + "\" call \"" + receiver_name + '.' + handler_name
+            + "\": args=" + args
+            + ", timeout=" + std::to_string(timeout.count()) + 's'
+        );
 
         // 取 (或懒创建) 该 receiver 的缓存 client; 本地失败在 get_client() 内
         // 已统一翻译为 LocalError.
