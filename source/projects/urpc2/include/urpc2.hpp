@@ -1,10 +1,12 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace std::literals;
 

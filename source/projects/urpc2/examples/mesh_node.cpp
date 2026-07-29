@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <functional>
@@ -62,7 +63,11 @@ bool call_peer(
                       << " round=" << round
                       << " call=" << call_index
                       << " attempt=" << attempt << '\n';
-            const auto result = rpc.call(peer_name, "echo", payload, 6000ms);
+            const auto result_bytes = rpc.call(
+                    peer_name, "echo",
+                    std::vector<std::uint8_t>{payload.begin(), payload.end()},
+                    6000ms);
+            const auto result = std::string{result_bytes.begin(), result_bytes.end()};
             if (result == expected) {
                 std::cout << "OK " << self_name << " -> " << peer_name
                           << " round=" << round
@@ -148,14 +153,16 @@ int run(int argc, char** argv)
     auto rpc = ::urpc2::Urpc2{self_name};
     rpc.register_handler(
             "echo",
-            [self_name](std::string args) {
+            [self_name](std::vector<std::uint8_t> args_bytes) {
+                const auto args = std::string{args_bytes.begin(), args_bytes.end()};
                 /*
                  * 添加确定性的处理器抖动, 使多进程负载下的回复不会完全按照
                  * 请求顺序返回.
                  */
                 const auto delay_ms = 10 + (std::hash<std::string>{}(self_name + args) % 81);
                 std::this_thread::sleep_for(std::chrono::milliseconds{int(delay_ms)});
-                return self_name + ":" + args;
+                const auto reply = self_name + ":" + args;
+                return std::vector<std::uint8_t>{reply.begin(), reply.end()};
             });
 
     std::cout << "READY " << self_name << " peers=" << peers.size()

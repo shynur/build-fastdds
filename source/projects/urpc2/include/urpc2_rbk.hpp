@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <urpc2.hpp>
 #include <nlohmann/json.hpp>
