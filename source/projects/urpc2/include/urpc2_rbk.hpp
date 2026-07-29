@@ -67,21 +67,17 @@ auto invoke_from_cbor(
     const std::function<R(A...)>& fn,
     const ::nlohmann::json& args,
     std::index_sequence<I...>
-) -> std::string {
+) -> std::vector<uint8_t> {
     (void)args;  // 零参处理器不会索引 args.
     if constexpr (std::is_void_v<R>) {
         fn(args.at(I).template get<std::decay_t<A>>()...);
         const auto result = ::nlohmann::json(nullptr);
-        return std::string(
-            ::nlohmann::json::to_cbor(result).begin(),
-            ::nlohmann::json::to_cbor(result).end()
-        );
+        return ::nlohmann::json::to_cbor(result);
     } else {
         const auto result = ::nlohmann::json(
             fn(args.at(I).template get<std::decay_t<A>>()...)
         );
-        const auto cbor = ::nlohmann::json::to_cbor(result);
-        return std::string(cbor.begin(), cbor.end());
+        return ::nlohmann::json::to_cbor(result);
     }
 }
 
@@ -111,10 +107,8 @@ void serve(
         [fn = std::move(raw_handler)](std::vector<uint8_t> args_cbor) -> std::vector<uint8_t> {
             // 将 vector<uint8_t> (CBOR) 解析为 JSON
             const auto args = ::nlohmann::json::from_cbor(args_cbor);
-            // 调用用户 handler 并将结果序列化为 CBOR
-            const auto result_cbor_str = detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
-            // 转换回 vector<uint8_t>
-            return std::vector<uint8_t>(result_cbor_str.begin(), result_cbor_str.end());
+            // 调用用户 handler 并将结果序列化为 CBOR (直接返回 vector<uint8_t>)
+            return detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
         });
 }
 
