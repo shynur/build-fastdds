@@ -55,8 +55,8 @@ void serve_handler(
 auto call_raw(
     const std::string& instance_name,
     const std::string& handler_name,
-    const std::string& args_cbor
-) -> std::string;
+    const std::vector<uint8_t>& args_cbor
+) -> std::vector<uint8_t>;
 
 /*
  * 把 CBOR array 中的元素按位置解包成 @p A... 各参数, 调用 @p fn, 再把结果
@@ -132,14 +132,12 @@ auto call(
     (args_json.push_back(::nlohmann::json(std::move(args))), ...);
 
     const auto args_cbor = ::nlohmann::json::to_cbor(args_json);
-    const auto args_cbor_str = std::string(args_cbor.begin(), args_cbor.end());
 
-    auto response = detail::call_raw(instance_name, handler_name, args_cbor_str);
+    auto response_cbor = detail::call_raw(instance_name, handler_name, args_cbor);
 
     if constexpr (std::is_void_v<Ret>) {
-        (void)response;
+        (void)response_cbor;
     } else {
-        const auto response_cbor = std::vector<std::uint8_t>(response.begin(), response.end());
         return ::nlohmann::json::from_cbor(response_cbor).template get<Ret>();
     }
 }
