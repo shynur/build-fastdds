@@ -494,6 +494,10 @@ class urpc2::Urpc2::Impl {
     }
 
     auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {
+        URPC2_LOG_INFO(
+            "Instance \""s + this->name_ + '.' + handler_name + "\" received call: args=" + args
+        );
+
         const std::shared_ptr<Handler> handler = [&] {
             const auto lock = std::lock_guard<std::mutex>{this->handlers_mutex_};
             const auto iter = this->handlers_.find(handler_name);
