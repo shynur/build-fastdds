@@ -108,11 +108,13 @@ void serve(
     detail::serve_handler(
         instance_name,
         handler_name,
-        [fn = std::move(raw_handler)](std::string args_cbor) -> std::string {
-            const auto args = ::nlohmann::json::from_cbor(
-                std::vector<std::uint8_t>(args_cbor.begin(), args_cbor.end())
-            );
-            return detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
+        [fn = std::move(raw_handler)](std::vector<uint8_t> args_cbor) -> std::vector<uint8_t> {
+            // 将 vector<uint8_t> (CBOR) 解析为 JSON
+            const auto args = ::nlohmann::json::from_cbor(args_cbor);
+            // 调用用户 handler 并将结果序列化为 CBOR
+            const auto result_cbor_str = detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
+            // 转换回 vector<uint8_t>
+            return std::vector<uint8_t>(result_cbor_str.begin(), result_cbor_str.end());
         });
 }
 

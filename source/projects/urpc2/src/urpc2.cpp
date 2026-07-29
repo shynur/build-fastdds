@@ -554,17 +554,16 @@ class urpc2::Urpc2::Impl {
     auto call(
         const std::string& receiver_name,
         const std::string& handler_name,
-        const std::string& args,
+        const std::vector<uint8_t>& args,
         const std::chrono::duration<double> timeout
-    ) -> std::string {
+    ) -> std::vector<uint8_t> {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
-        const auto args_vec = std::vector<uint8_t>(args.begin(), args.end());
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
             + urpc2_detail::action("call") + " \""
             + urpc2_detail::entity(receiver_name + '.' + handler_name)
-            + "\": args=" + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args_vec))
+            + "\": args=" + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args))
             + ", timeout=" + urpc2_detail::value(std::to_string(timeout.count()) + 's')
         );
 
@@ -578,7 +577,7 @@ class urpc2::Urpc2::Impl {
         //   - 目标存在:   匹配就绪即发请求, 省去此前无条件的 5s 固定延迟;
         //   - 目标不存在: 匹配等待到点, send_request 返回失败 -> router() 的 future
         //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
-        auto future = client->router(handler_name, args_vec);
+        auto future = client->router(handler_name, args);
         if (future.wait_for(timeout) != std::future_status::ready) {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
@@ -594,15 +593,14 @@ class urpc2::Urpc2::Impl {
         // DDS 类型泄漏给调用方, 也避免非 std::exception 的 RpcException 逃逸导致
         // std::terminate. catch 顺序须由派生到基类 (Remote 专用码在 RpcRemoteException 前).
         try {
-            auto response_vec = future.get();
-            auto response = std::string(response_vec.begin(), response_vec.end());
+            auto response = future.get();
             URPC2_LOG_INFO(
                 "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
                 + urpc2_detail::action("received response from") + " \""
                 + urpc2_detail::entity(receiver_name + '.' + handler_name) + "\": "
-                + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args_vec))
+                + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args))
                 + ' ' + urpc2_detail::separator("->") + ' '
-                + urpc2_detail::response(urpc2_detail::cbor_to_json_for_logging(response_vec))
+                + urpc2_detail::response(urpc2_detail::cbor_to_json_for_logging(response))
             );
             return response;
         }
@@ -642,7 +640,6 @@ class urpc2::Urpc2::Impl {
     }
 
     auto dispatch(const std::string& handler_name, const std::vector<uint8_t>& args) const -> std::vector<uint8_t> {
-        const auto args_str = std::string(args.begin(), args.end());
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
             + urpc2_detail::action("received call") + ": args="
@@ -661,8 +658,7 @@ class urpc2::Urpc2::Impl {
             }
             return iter->second;
         }();
-        auto response_str = (*handler)(args_str);
-        auto response = std::vector<uint8_t>(response_str.begin(), response_str.end());
+        auto response = (*handler)(args);
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
             + urpc2_detail::action("completed call") + ": "
@@ -685,8 +681,8 @@ void urpc2::Urpc2::register_handler(const std::string& handler_name, Handler han
 auto urpc2::Urpc2::call(
     const std::string& receiver_name,
     const std::string& handler_name,
-    const std::string& args,
+    const std::vector<uint8_t>& args,
     const std::chrono::duration<double> timeout
-) -> std::string {
+) -> std::vector<uint8_t> {
     return this->impl_->call(receiver_name, handler_name, args, timeout);
 }

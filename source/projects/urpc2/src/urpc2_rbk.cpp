@@ -90,7 +90,7 @@ void serve_handler(
 auto call_raw(
     const std::string& instance_name,
     const std::string& handler_name,
-    const std::string& args_json
+    const std::string& args_cbor
 ) -> std::string {
     ::urpc2::Urpc2* vehicle = nullptr;
     {
@@ -106,7 +106,11 @@ auto call_raw(
             vehicle = reg.client.get();
         }
     }
-    return vehicle->call(instance_name, handler_name, args_json, default_call_timeout);
+    // 转换 string (CBOR) 到 vector<uint8_t> 供底层使用
+    const auto args_vec = std::vector<uint8_t>(args_cbor.begin(), args_cbor.end());
+    const auto response_vec = vehicle->call(instance_name, handler_name, args_vec, default_call_timeout);
+    // 转换回 string
+    return std::string(response_vec.begin(), response_vec.end());
 }
 
 }}  // namespace urpc2_rbk::detail
