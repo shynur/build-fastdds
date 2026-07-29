@@ -456,7 +456,12 @@ class urpc2::Urpc2::Impl {
         // DDS 类型泄漏给调用方, 也避免非 std::exception 的 RpcException 逃逸导致
         // std::terminate. catch 顺序须由派生到基类 (Remote 专用码在 RpcRemoteException 前).
         try {
-            return future.get();
+            auto response = future.get();
+            URPC2_LOG_INFO(
+                "Instance \""s + this->name_ + "\" received response from \"" + receiver_name + '.'
+                + handler_name + "\": " + args + " -> " + response
+            );
+            return response;
         }
         catch (const rpc::RemoteUnknownOperationError& e) {
             URPC2_THROW(
