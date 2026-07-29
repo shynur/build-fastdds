@@ -53,16 +53,37 @@ Description: ${desc}
  安装到 /usr/local. 变体: ${variant}.
 EOF
 
+    # 装机后避让 rbk / spg 环境中可能已有的 urpc2 库. 显式列出路径,
+    # 不依赖 /bin/sh 不一定支持的 brace expansion.
+    cat > "${stage}/DEBIAN/postinst" <<'EOF'
+#!/bin/sh
+set -e
+
+if [ "${1:-}" = configure ]; then
+    for library in \
+        /opt/data/rbk/3rdlib/liburpc2.so \
+        /opt/data/rbk/3rdlib/liburpc2_rbk.so \
+        /opt/data/spg/3rdlib/liburpc2.so \
+        /opt/data/spg/3rdlib/liburpc2_rbk.so
+    do
+        if [ -e "${library}" ] || [ -L "${library}" ]; then
+            mv -f -- "${library}" "${library}_bak"
+        fi
+    done
+fi
+
+ldconfig
+EOF
+    chmod 0755 "${stage}/DEBIAN/postinst"
+
     # /usr/local/lib 已在默认 ld 搜索路径内 (Ubuntu 的 /etc/ld.so.conf.d/libc.conf);
-    # 装/卸机后刷新 ld 缓存.
-    for hook in postinst postrm; do
-        cat > "${stage}/DEBIAN/${hook}" <<'EOF'
+    # 卸机后刷新 ld 缓存.
+    cat > "${stage}/DEBIAN/postrm" <<'EOF'
 #!/bin/sh
 set -e
 ldconfig
 EOF
-        chmod 0755 "${stage}/DEBIAN/${hook}"
-    done
+    chmod 0755 "${stage}/DEBIAN/postrm"
 
     # --root-owner-group: 包内文件强制归 root:root, 无需 fakeroot (跳过宿主实际属主).
     dpkg-deb --root-owner-group --build "${stage}" "${deb}"
