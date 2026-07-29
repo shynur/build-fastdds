@@ -33,5 +33,6 @@ gen_one() {
 
 gen_one "tests/dds/src/types" "HelloWorld.idl"
 gen_one "tests/rpc/src/types" "calculator.idl"
+gen_one "projects/urpc2/src/types" "processor.idl"
 
 echo ">> 类型代码生成完成" >&2

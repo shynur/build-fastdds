@@ -48,7 +48,7 @@ public:
     Processor_RequestPubSubType()
     {
         set_name("urpc2::gen::Processor_Request");
-        uint32_t type_size = 536UL;
+        uint32_t type_size = 280UL;
         type_size += static_cast<uint32_t>(eprosima::fastcdr::Cdr::alignment(type_size, 4)); /* possible submessage alignment */
         max_serialized_type_size = type_size + 4; /*encapsulation*/
         is_compute_key_provided = false;
@@ -196,7 +196,7 @@ public:
     Processor_ReplyPubSubType()
     {
         set_name("urpc2::gen::Processor_Reply");
-        uint32_t type_size = 536UL;
+        uint32_t type_size = 280UL;
         type_size += static_cast<uint32_t>(eprosima::fastcdr::Cdr::alignment(type_size, 4)); /* possible submessage alignment */
         max_serialized_type_size = type_size + 4; /*encapsulation*/
         is_compute_key_provided = false;

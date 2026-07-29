@@ -35,10 +35,10 @@ struct ProcessorServerImplementation :
     public ProcessorServer_IServerImplementation
 {
 
-    std::string router(
+    urpc2::gen::OctetSeq router(
             const eprosima::fastdds::dds::rpc::RpcRequest& info,
             /*in*/ const std::string& handler_name,
-            /*in*/ const std::string& args) override
+            /*in*/ const urpc2::gen::OctetSeq& args) override
     {
         static_cast<void>(info);
         static_cast<void>(handler_name);

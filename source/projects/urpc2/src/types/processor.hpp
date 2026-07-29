@@ -25,6 +25,8 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
+
 #include <fastcdr/cdr/fixed_size_string.hpp>
 #include <fastcdr/xcdr/optional.hpp>
 #include <fastdds/dds/rpc/interfaces/RpcFuture.hpp>
@@ -58,6 +60,8 @@ namespace urpc2 {
 
 namespace gen {
 
+typedef std::vector<uint8_t> OctetSeq;
+
 
 /*!
  * @brief This class represents the interface Processor defined by the user in the IDL file.
@@ -69,9 +73,9 @@ public:
     virtual ~Processor() = default;
 
 
-    virtual eprosima::fastdds::dds::rpc::RpcFuture<std::string> router(
+    virtual eprosima::fastdds::dds::rpc::RpcFuture<urpc2::gen::OctetSeq> router(
             /*in*/ const std::string& handler_name,
-            /*in*/ const std::string& args) = 0;
+            /*in*/ const urpc2::gen::OctetSeq& args) = 0;
 
 };
 

@@ -41,6 +41,88 @@ using namespace eprosima::fastdds::dds::xtypes;
 
 namespace urpc2 {
 namespace gen {
+void register_OctetSeq_type_identifier(
+        TypeIdentifierPair& type_ids_OctetSeq)
+{
+    ReturnCode_t return_code_OctetSeq {eprosima::fastdds::dds::RETCODE_OK};
+    return_code_OctetSeq =
+        eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
+        "urpc2::gen::OctetSeq", type_ids_OctetSeq);
+    if (eprosima::fastdds::dds::RETCODE_OK != return_code_OctetSeq)
+    {
+        AliasTypeFlag alias_flags_OctetSeq = 0;
+        QualifiedTypeName type_name_OctetSeq = "urpc2::gen::OctetSeq";
+        eprosima::fastcdr::optional<AppliedBuiltinTypeAnnotations> type_ann_builtin_OctetSeq;
+        eprosima::fastcdr::optional<AppliedAnnotationSeq> ann_custom_OctetSeq;
+        CompleteTypeDetail detail_OctetSeq = TypeObjectUtils::build_complete_type_detail(type_ann_builtin_OctetSeq, ann_custom_OctetSeq, type_name_OctetSeq.to_string());
+        CompleteAliasHeader header_OctetSeq = TypeObjectUtils::build_complete_alias_header(detail_OctetSeq);
+        AliasMemberFlag related_flags_OctetSeq = 0;
+        return_code_OctetSeq =
+            eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
+            "anonymous_sequence_byte_unbounded", type_ids_OctetSeq);
+
+        if (eprosima::fastdds::dds::RETCODE_OK != return_code_OctetSeq)
+        {
+            return_code_OctetSeq =
+                eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
+                "_byte", type_ids_OctetSeq);
+
+            if (eprosima::fastdds::dds::RETCODE_OK != return_code_OctetSeq)
+            {
+                EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
+                        "Sequence element TypeIdentifier unknown to TypeObjectRegistry.");
+                return;
+            }
+            bool element_identifier_anonymous_sequence_byte_unbounded_ec {false};
+            TypeIdentifier* element_identifier_anonymous_sequence_byte_unbounded {new TypeIdentifier(TypeObjectUtils::retrieve_complete_type_identifier(type_ids_OctetSeq, element_identifier_anonymous_sequence_byte_unbounded_ec))};
+            if (!element_identifier_anonymous_sequence_byte_unbounded_ec)
+            {
+                EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION, "Sequence element TypeIdentifier inconsistent.");
+                return;
+            }
+            EquivalenceKind equiv_kind_anonymous_sequence_byte_unbounded = EK_COMPLETE;
+            if (TK_NONE == type_ids_OctetSeq.type_identifier2()._d())
+            {
+                equiv_kind_anonymous_sequence_byte_unbounded = EK_BOTH;
+            }
+            CollectionElementFlag element_flags_anonymous_sequence_byte_unbounded = 0;
+            PlainCollectionHeader header_anonymous_sequence_byte_unbounded = TypeObjectUtils::build_plain_collection_header(equiv_kind_anonymous_sequence_byte_unbounded, element_flags_anonymous_sequence_byte_unbounded);
+            {
+                SBound bound = 0;
+                PlainSequenceSElemDefn seq_sdefn = TypeObjectUtils::build_plain_sequence_s_elem_defn(header_anonymous_sequence_byte_unbounded, bound,
+                            eprosima::fastcdr::external<TypeIdentifier>(element_identifier_anonymous_sequence_byte_unbounded));
+                if (eprosima::fastdds::dds::RETCODE_BAD_PARAMETER ==
+                        TypeObjectUtils::build_and_register_s_sequence_type_identifier(seq_sdefn, "anonymous_sequence_byte_unbounded", type_ids_OctetSeq))
+                {
+                    EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
+                        "anonymous_sequence_byte_unbounded already registered in TypeObjectRegistry for a different type.");
+                }
+            }
+        }
+        bool common_OctetSeq_ec {false};
+        CommonAliasBody common_OctetSeq {TypeObjectUtils::build_common_alias_body(related_flags_OctetSeq,
+                TypeObjectUtils::retrieve_complete_type_identifier(type_ids_OctetSeq, common_OctetSeq_ec))};
+        if (!common_OctetSeq_ec)
+        {
+            EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION, "urpc2::gen::OctetSeq related TypeIdentifier inconsistent.");
+            return;
+        }
+        eprosima::fastcdr::optional<AppliedBuiltinMemberAnnotations> member_ann_builtin_OctetSeq;
+        ann_custom_OctetSeq.reset();
+        CompleteAliasBody body_OctetSeq = TypeObjectUtils::build_complete_alias_body(common_OctetSeq,
+                member_ann_builtin_OctetSeq, ann_custom_OctetSeq);
+        CompleteAliasType alias_type_OctetSeq = TypeObjectUtils::build_complete_alias_type(alias_flags_OctetSeq,
+                header_OctetSeq, body_OctetSeq);
+        if (eprosima::fastdds::dds::RETCODE_BAD_PARAMETER ==
+                TypeObjectUtils::build_and_register_alias_type_object(alias_type_OctetSeq,
+                    type_name_OctetSeq.to_string(), type_ids_OctetSeq))
+        {
+            EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
+                "urpc2::gen::OctetSeq already registered in TypeObjectRegistry for a different type.");
+        }
+    }
+}
+
 
 
 namespace detail {
@@ -109,21 +191,11 @@ void register_Processor_router_In_type_identifier(
             ReturnCode_t return_code_args {eprosima::fastdds::dds::RETCODE_OK};
             return_code_args =
                 eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-                "anonymous_string_unbounded", type_ids_args);
+                "urpc2::gen::OctetSeq", type_ids_args);
 
             if (eprosima::fastdds::dds::RETCODE_OK != return_code_args)
             {
-                {
-                    SBound bound = 0;
-                    StringSTypeDefn string_sdefn = TypeObjectUtils::build_string_s_type_defn(bound);
-                    if (eprosima::fastdds::dds::RETCODE_BAD_PARAMETER ==
-                            TypeObjectUtils::build_and_register_s_string_type_identifier(string_sdefn,
-                            "anonymous_string_unbounded", type_ids_args))
-                    {
-                        EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                            "anonymous_string_unbounded already registered in TypeObjectRegistry for a different type.");
-                    }
-                }
+                ::urpc2::gen::register_OctetSeq_type_identifier(type_ids_args);
             }
             StructMemberFlag member_flags_args = TypeObjectUtils::build_struct_member_flag(eprosima::fastdds::dds::xtypes::TryConstructFailAction::DISCARD,
                     false, false, false, false);
@@ -179,21 +251,11 @@ void register_Processor_router_Out_type_identifier(
             ReturnCode_t return_code_return_ {eprosima::fastdds::dds::RETCODE_OK};
             return_code_return_ =
                 eprosima::fastdds::dds::DomainParticipantFactory::get_instance()->type_object_registry().get_type_identifiers(
-                "anonymous_string_unbounded", type_ids_return_);
+                "urpc2::gen::OctetSeq", type_ids_return_);
 
             if (eprosima::fastdds::dds::RETCODE_OK != return_code_return_)
             {
-                {
-                    SBound bound = 0;
-                    StringSTypeDefn string_sdefn = TypeObjectUtils::build_string_s_type_defn(bound);
-                    if (eprosima::fastdds::dds::RETCODE_BAD_PARAMETER ==
-                            TypeObjectUtils::build_and_register_s_string_type_identifier(string_sdefn,
-                            "anonymous_string_unbounded", type_ids_return_))
-                    {
-                        EPROSIMA_LOG_ERROR(XTYPES_TYPE_REPRESENTATION,
-                            "anonymous_string_unbounded already registered in TypeObjectRegistry for a different type.");
-                    }
-                }
+                ::urpc2::gen::register_OctetSeq_type_identifier(type_ids_return_);
             }
             StructMemberFlag member_flags_return_ = TypeObjectUtils::build_struct_member_flag(eprosima::fastdds::dds::xtypes::TryConstructFailAction::DISCARD,
                     false, false, false, false);

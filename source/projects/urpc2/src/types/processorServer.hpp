@@ -41,10 +41,10 @@ struct ProcessorServer_IServerImplementation
 {
     virtual ~ProcessorServer_IServerImplementation() = default;
 
-    virtual std::string router(
+    virtual urpc2::gen::OctetSeq router(
             const eprosima::fastdds::dds::rpc::RpcRequest& info,
             /*in*/ const std::string& handler_name,
-            /*in*/ const std::string& args) = 0;
+            /*in*/ const urpc2::gen::OctetSeq& args) = 0;
 
 };
 

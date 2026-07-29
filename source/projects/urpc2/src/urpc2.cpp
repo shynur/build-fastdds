@@ -26,6 +26,8 @@
 #include <fastdds/rtps/transport/UDPv4TransportDescriptor.hpp>
 #include <fastdds/utils/IPFinder.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include "types/processor.hpp"
 #include "types/processorClient.hpp"
 #include "types/processorServer.hpp"
@@ -89,6 +91,26 @@ namespace urpc2_detail {
 
     static auto separator(std::string text) -> std::string {
         return styled(std::move(text), ansi_dim);
+    }
+
+    /*
+     * 将 CBOR 二进制数据转换为 JSON 字符串用于日志显示.
+     * 如果 CBOR 无法转换为合法 JSON, 返回占位符文本.
+     */
+    static auto cbor_to_json_for_logging(const std::vector<std::uint8_t>& cbor_data) -> std::string {
+        try {
+            const auto json_obj = ::nlohmann::json::from_cbor(cbor_data);
+            return json_obj.dump();
+        }
+        catch (...) {
+            return "<binary data, " + std::to_string(cbor_data.size()) + " bytes>";
+        }
+    }
+
+    static auto cbor_to_json_for_logging(const std::string& cbor_str) -> std::string {
+        return cbor_to_json_for_logging(
+            std::vector<std::uint8_t>(cbor_str.begin(), cbor_str.end())
+        );
     }
 
     static void format_timestamp(char (&timestamp)[32]) noexcept {
@@ -367,9 +389,9 @@ class urpc2::Urpc2::Impl {
         Impl& owner_;
       public:
         explicit Router(Impl& owner): owner_{owner} {}
-        std::string router(
+        std::vector<uint8_t> router(
             const ::eprosima::fastdds::dds::rpc::RpcRequest&,
-            const std::string& handler_name, const std::string& args
+            const std::string& handler_name, const std::vector<uint8_t>& args
         ) override {
             return this->owner_.dispatch(handler_name, args);
         }
@@ -537,11 +559,12 @@ class urpc2::Urpc2::Impl {
     ) -> std::string {
         namespace rpc = ::eprosima::fastdds::dds::rpc;
 
+        const auto args_vec = std::vector<uint8_t>(args.begin(), args.end());
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
             + urpc2_detail::action("call") + " \""
             + urpc2_detail::entity(receiver_name + '.' + handler_name)
-            + "\": args=" + urpc2_detail::argument(args)
+            + "\": args=" + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args_vec))
             + ", timeout=" + urpc2_detail::value(std::to_string(timeout.count()) + 's')
         );
 
@@ -555,7 +578,7 @@ class urpc2::Urpc2::Impl {
         //   - 目标存在:   匹配就绪即发请求, 省去此前无条件的 5s 固定延迟;
         //   - 目标不存在: 匹配等待到点, send_request 返回失败 -> router() 的 future
         //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
-        auto future = client->router(handler_name, args);
+        auto future = client->router(handler_name, args_vec);
         if (future.wait_for(timeout) != std::future_status::ready) {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
@@ -571,13 +594,15 @@ class urpc2::Urpc2::Impl {
         // DDS 类型泄漏给调用方, 也避免非 std::exception 的 RpcException 逃逸导致
         // std::terminate. catch 顺序须由派生到基类 (Remote 专用码在 RpcRemoteException 前).
         try {
-            auto response = future.get();
+            auto response_vec = future.get();
+            auto response = std::string(response_vec.begin(), response_vec.end());
             URPC2_LOG_INFO(
                 "Instance \""s + urpc2_detail::entity(this->name_) + "\" "
                 + urpc2_detail::action("received response from") + " \""
                 + urpc2_detail::entity(receiver_name + '.' + handler_name) + "\": "
-                + urpc2_detail::argument(args) + ' ' + urpc2_detail::separator("->") + ' '
-                + urpc2_detail::response(response)
+                + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args_vec))
+                + ' ' + urpc2_detail::separator("->") + ' '
+                + urpc2_detail::response(urpc2_detail::cbor_to_json_for_logging(response_vec))
             );
             return response;
         }
@@ -616,10 +641,12 @@ class urpc2::Urpc2::Impl {
         }
     }
 
-    auto dispatch(const std::string& handler_name, const std::string& args) const -> std::string {
+    auto dispatch(const std::string& handler_name, const std::vector<uint8_t>& args) const -> std::vector<uint8_t> {
+        const auto args_str = std::string(args.begin(), args.end());
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
-            + urpc2_detail::action("received call") + ": args=" + urpc2_detail::argument(args)
+            + urpc2_detail::action("received call") + ": args="
+            + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args))
         );
 
         const std::shared_ptr<Handler> handler = [&] {
@@ -634,11 +661,14 @@ class urpc2::Urpc2::Impl {
             }
             return iter->second;
         }();
-        auto response = (*handler)(args);
+        auto response_str = (*handler)(args_str);
+        auto response = std::vector<uint8_t>(response_str.begin(), response_str.end());
         URPC2_LOG_INFO(
             "Instance \""s + urpc2_detail::entity(this->name_ + '.' + handler_name) + "\" "
-            + urpc2_detail::action("completed call") + ": " + urpc2_detail::argument(args)
-            + ' ' + urpc2_detail::separator("->") + ' ' + urpc2_detail::response(response)
+            + urpc2_detail::action("completed call") + ": "
+            + urpc2_detail::argument(urpc2_detail::cbor_to_json_for_logging(args))
+            + ' ' + urpc2_detail::separator("->") + ' '
+            + urpc2_detail::response(urpc2_detail::cbor_to_json_for_logging(response))
         );
         return response;
     }

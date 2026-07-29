@@ -335,9 +335,9 @@ private:
 
 public:
 
-    eprosima::fastdds::dds::rpc::RpcFuture<std::string> router(
+    eprosima::fastdds::dds::rpc::RpcFuture<urpc2::gen::OctetSeq> router(
             /*in*/ const std::string& handler_name,
-            /*in*/ const std::string& args) override
+            /*in*/ const urpc2::gen::OctetSeq& args) override
     {
         // Create a promise to hold the result
         auto result = std::make_shared<router_promise>();
@@ -355,7 +355,7 @@ private:
 
     struct router_promise : public IReplyProcessor
     {
-        std::promise<std::string> promise;
+        std::promise<urpc2::gen::OctetSeq> promise;
 
         void process_reply(
                 const ReplyType& reply,

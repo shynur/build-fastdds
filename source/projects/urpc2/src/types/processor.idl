@@ -1,7 +1,9 @@
 module urpc2 {
     module gen {
+        typedef sequence<octet> OctetSeq;
+
         interface Processor {
-            string router(in string handler_name, in string args);
+            OctetSeq router(in string handler_name, in OctetSeq args);
         };
     };
 };

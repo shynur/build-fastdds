@@ -72,7 +72,8 @@ jobs:
           # 下游解包即精确还原到原位. 只带生成物, 不带 .idl (build 已从 checkout 得到).
           tar czf generated-types.tar.gz --exclude='*.idl' \
             source/tests/dds/src/types \
-            source/tests/rpc/src/types
+            source/tests/rpc/src/types \
+            source/projects/urpc2/src/types
           ls -lh generated-types.tar.gz
 
       - name: Upload generated types
@@ -109,8 +110,8 @@ jobs:
       - name: Extract generated types into source/
         run: |
           set -euo pipefail
-          tar xzf generated-types.tar.gz    # 还原 source/tests/*/src/types/ 下的生成物
-          find source/tests -name '*.cxx' -o -name '*.hpp' | sort
+          tar xzf generated-types.tar.gz    # 还原 source/tests/*/src/types/ 和 source/projects/urpc2/src/types/ 下的生成物
+          find source/tests source/projects/urpc2/src/types -name '*.cxx' -o -name '*.hpp' | sort
 
       - name: Resolve Ubuntu image from config.ini
         id: cfg

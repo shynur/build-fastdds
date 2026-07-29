@@ -42,7 +42,7 @@ namespace fastcdr {
 struct Processor_router_In
 {
     std::string handler_name; 
-    std::string args; 
+    urpc2::gen::OctetSeq args; 
 };
 */
 template<>
@@ -140,7 +140,7 @@ void serialize_key(
 /*
 struct Processor_router_Out
 {
-    std::string return_;
+    urpc2::gen::OctetSeq return_;
 };
 */
 template<>

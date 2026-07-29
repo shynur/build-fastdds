@@ -42,6 +42,7 @@
 
 namespace urpc2 {
 namespace gen {
+typedef std::vector<uint8_t> OctetSeq;
 eProsima_user_DllExport eprosima::fastdds::dds::rpc::ServiceTypeSupport create_Processor_service_type_support();
 
 }  // namespace gen
