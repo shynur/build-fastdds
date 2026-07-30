@@ -4,12 +4,15 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include <unistd.h>  // getpid()
 
-#include <urpc2.hpp>
+#include <urpc2.hpp>  // 同时引入全局的 using namespace std::literals (供 "..."s 使用)
+
+#include "urpc2_log.hpp"
 
 namespace urpc2_rbk { namespace detail { namespace {
 
@@ -79,12 +82,61 @@ void serve_handler(
      * 仍然有效.  真正的注册交给实例自己的 register_handler() (它有独立的锁),
      * 无需在注册期间继续持有注册表锁.
      */
+    /*
+     * 提前自查可调用性.  下面注册进去的是恒为真的 lambda, 底层 register_handler()
+     * 的同名检查再也不会触发, 而不可调用的 handler 若一路放过去, 要等到真有请求
+     * 打过来才在 std::function 里炸成 bad_function_call.  故在此保留该检查, 维持
+     * "注册即报错" 的行为.
+     */
+    if (!handler) {
+        URPC2_THROW(std::invalid_argument, "Handler must be callable");
+    }
+
     ::urpc2::Urpc2* instance = nullptr;
     {
         const auto lock = std::lock_guard<std::mutex>{registry().mutex};
         instance = &get_or_create_instance_locked(instance_name);
     }
-    instance->register_handler(handler_name, std::move(handler));
+
+    /*
+     * 包一层错误处理: 处理器体内抛出的异常在这里落一条 [ERROR] 日志, 然后原样
+     * 重抛.
+     *
+     * 日志是纯增量的, 不改变错误语义: 重抛后异常仍会走到生成的 server 代码, 由它
+     * 翻译成 REMOTE_EX_* 回给 client (调用方那侧照旧收到 urpc2::RemoteError).  若在
+     * 此吞掉异常, 就得凭空编一个返回值, client 会把失败当成功.
+     *
+     * 之所以要在服务端留这条日志: 回给 client 的远端异常只带一个错误码, 处理器自
+     * 己的异常类型和 what() 到不了对端, 排查时服务端日志是唯一线索.  catch (...)
+     * 的分支覆盖非 std::exception 的抛出物 (例如生成代码用的 RpcException), 它们
+     * 同样会静默变成一个错误码.
+     */
+    instance->register_handler(
+        handler_name,
+        [instance_name, handler_name, handler = std::move(handler)](std::string args) -> std::string {
+            try {
+                return handler(std::move(args));
+            }
+            catch (const std::exception& e) {
+                URPC2_LOG_ERROR(
+                    ::urpc2_detail::exception_class_name(e).c_str(),
+                    "Handler \""s
+                    + ::urpc2_detail::entity(instance_name + '.' + handler_name)
+                    + "\" failed: " + e.what()
+                );
+                throw;
+            }
+            catch (...) {
+                URPC2_LOG_ERROR(
+                    "unknown exception",
+                    "Handler \""s
+                    + ::urpc2_detail::entity(instance_name + '.' + handler_name)
+                    + "\" failed"
+                );
+                throw;
+            }
+        }
+    );
 }
 
 auto call_raw(
