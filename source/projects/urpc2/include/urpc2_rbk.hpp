@@ -110,10 +110,7 @@ void serve(
         handler_name,
         [fn = std::move(raw_handler)](std::string args_cbor) -> std::string {
             const auto args = ::nlohmann::json::from_cbor(
-                std::vector<std::uint8_t>(args_cbor.begin(), args_cbor.end()),
-                true,  // strict
-                true,  // allow_exceptions
-                ::nlohmann::json::cbor_tag_handler_t::ignore
+                std::vector<std::uint8_t>(args_cbor.begin(), args_cbor.end())
             );
             return detail::invoke_from_cbor(fn, args, std::index_sequence_for<A...>{});
         });
