@@ -95,7 +95,8 @@ namespace urpc2_detail {
     static auto cbor_to_json_for_logging(const std::vector<std::uint8_t>& cbor_data) -> std::string {
         try {
             const auto json_obj = ::nlohmann::json::from_cbor(cbor_data);
-            return json_obj.dump();
+            // 使用 dump() 时跳过无效 UTF-8 检查，允许二进制字符串
+            return json_obj.dump(-1, ' ', false, ::nlohmann::json::error_handler_t::replace);
         }
         catch (...) {
             return "<binary data, " + std::to_string(cbor_data.size()) + " bytes>";
