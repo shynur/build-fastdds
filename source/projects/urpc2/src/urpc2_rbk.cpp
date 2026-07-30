@@ -24,6 +24,66 @@ namespace urpc2_rbk { namespace detail { namespace {
 constexpr auto default_call_timeout = std::chrono::milliseconds{30000};
 
 /*
+ * 安全地从异常消息中提取可打印的文本，避免日志系统遇到非 UTF-8 数据崩溃。
+ * 如果消息包含无效 UTF-8 字节，截断到第一个坏字节并添加占位符。
+ */
+auto sanitize_exception_message(const char* what) -> std::string {
+    if (what == nullptr) {
+        return "<null>";
+    }
+
+    std::string result;
+    const char* p = what;
+    while (*p != '\0') {
+        const auto byte = static_cast<unsigned char>(*p);
+
+        // ASCII 范围 (0x00-0x7F) 直接接受
+        if (byte < 0x80) {
+            result += *p;
+            ++p;
+            continue;
+        }
+
+        // UTF-8 多字节序列检查
+        int continuation_bytes = 0;
+        if ((byte & 0xE0) == 0xC0) {
+            continuation_bytes = 1;  // 2 字节序列
+        } else if ((byte & 0xF0) == 0xE0) {
+            continuation_bytes = 2;  // 3 字节序列
+        } else if ((byte & 0xF8) == 0xF0) {
+            continuation_bytes = 3;  // 4 字节序列
+        } else {
+            // 无效的 UTF-8 起始字节
+            result += " <binary data truncated>";
+            break;
+        }
+
+        // 验证后续字节都是合法的 continuation 字节 (10xxxxxx)
+        bool valid = true;
+        for (int i = 1; i <= continuation_bytes; ++i) {
+            if (p[i] == '\0' || (static_cast<unsigned char>(p[i]) & 0xC0) != 0x80) {
+                valid = false;
+                break;
+            }
+        }
+
+        if (valid) {
+            // 合法的 UTF-8 序列，复制整个序列
+            for (int i = 0; i <= continuation_bytes; ++i) {
+                result += p[i];
+            }
+            p += continuation_bytes + 1;
+        } else {
+            // 无效的 UTF-8 序列
+            result += " <binary data truncated>";
+            break;
+        }
+    }
+
+    return result;
+}
+
+/*
  * 进程级实例注册表.
  *
  * serve() 按名字懒创建并缓存 urpc2::Urpc2 实例, 同名实例复用同一对象.
@@ -122,7 +182,7 @@ void serve_handler(
                     ::urpc2_detail::exception_class_name(e).c_str(),
                     "Handler \""s
                     + ::urpc2_detail::entity(instance_name + '.' + handler_name)
-                    + "\" failed: " + e.what()
+                    + "\" failed: " + sanitize_exception_message(e.what())
                 );
                 throw;
             }
