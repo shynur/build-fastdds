@@ -8,8 +8,10 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -33,6 +35,45 @@
 #include "types/processorServer.hpp"
 
 namespace urpc2_detail {
+    // 枚举值按严重程度递增, 供日志阈值过滤使用.
+    enum class LogLevel {
+        info,
+        error,
+    };
+
+    struct NamedLogLevel {
+        std::string_view name;
+        LogLevel level;
+    };
+
+    static constexpr NamedLogLevel named_log_levels[] = {
+        {"info", LogLevel::info},
+        {"error", LogLevel::error},
+    };
+
+    static auto configured_log_level() noexcept -> std::optional<LogLevel> {
+        static const auto configured = []() -> std::optional<LogLevel> {
+            const auto *const value = std::getenv("URPC2_LOG");
+            if (value == nullptr) {
+                return std::nullopt;
+            }
+
+            const auto name = std::string_view{value};
+            for (const auto& named_level: named_log_levels) {
+                if (named_level.name == name) {
+                    return named_level.level;
+                }
+            }
+            return std::nullopt;
+        }();
+        return configured;
+    }
+
+    static auto should_log(const LogLevel level) noexcept -> bool {
+        const auto configured = configured_log_level();
+        return configured.has_value() && level >= *configured;
+    }
+
     static constexpr auto ansi_reset = "\033[0m";
     static constexpr auto ansi_bold = "\033[1m";
     static constexpr auto ansi_dim = "\033[2m";
@@ -236,24 +277,30 @@ namespace urpc2_detail {
 
 #define URPC2_LOG_INFO(message) \
     do { \
-        const auto urpc2_log_message = std::string{message}; \
-        ::urpc2_detail::log_info( \
-            __FILE__, __LINE__, __PRETTY_FUNCTION__, urpc2_log_message); \
+        if (::urpc2_detail::should_log(::urpc2_detail::LogLevel::info)) { \
+            const auto urpc2_log_message = std::string{message}; \
+            ::urpc2_detail::log_info( \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, urpc2_log_message); \
+        } \
     } while (false)
 
 #define URPC2_THROW(exception_class, message) \
     do { \
         auto urpc2_exception_message = std::string{message}; \
-        ::urpc2_detail::log_exception( \
-            __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        if (::urpc2_detail::should_log(::urpc2_detail::LogLevel::error)) { \
+            ::urpc2_detail::log_exception( \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        } \
         throw exception_class{std::move(urpc2_exception_message)}; \
     } while (false)
 
 #define URPC2_THROW_C_STRING(exception_class, message) \
     do { \
         const auto urpc2_exception_message = std::string{message}; \
-        ::urpc2_detail::log_exception( \
-            __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        if (::urpc2_detail::should_log(::urpc2_detail::LogLevel::error)) { \
+            ::urpc2_detail::log_exception( \
+                __FILE__, __LINE__, __PRETTY_FUNCTION__, #exception_class, urpc2_exception_message); \
+        } \
         throw exception_class{urpc2_exception_message.c_str()}; \
     } while (false)
 
