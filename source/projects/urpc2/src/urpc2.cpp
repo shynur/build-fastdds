@@ -410,21 +410,15 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
  * 旧序号, 从而恢复调用链.
  *
  * 深度 1 要求每个 requester 同时最多有一个有效请求; CachedClient::call_mutex
- * 在 call() 中保证这一点.  reader 仍需两个 cache: Fast DDS 会先为新分片申请
- * cache, 随后才用 KEEP_LAST 淘汰旧样本.  request writer 保持 RequesterQos 的
- * 默认 KEEP_ALL, 以免削弱尚未确认请求的重传能力.
+ * 在 call() 中保证这一点.  不收紧 reader resource limits: reply writer 的全局
+ * 序列空间会让发给其它 requester 的回复暂时计入 unknown missing changes;
+ * max_samples 太小会在 KEEP_LAST 淘汰旧样本前直接拒绝新回复.  request writer
+ * 保持 RequesterQos 的默认 KEEP_ALL, 以免削弱尚未确认请求的重传能力.
  */
 static auto create_requester_qos() -> ::eprosima::fastdds::dds::RequesterQos {
     auto qos = ::eprosima::fastdds::dds::RequesterQos{};
     qos.reader_qos.history().kind = ::eprosima::fastdds::dds::KEEP_LAST_HISTORY_QOS;
     qos.reader_qos.history().depth = 1;
-
-    auto& limits = qos.reader_qos.resource_limits();
-    limits.max_samples = 2;
-    limits.max_instances = 1;
-    limits.max_samples_per_instance = 1;
-    limits.allocated_samples = 2;
-    limits.extra_samples = 1;
     return qos;
 }
 
