@@ -25,6 +25,7 @@
 #include <fastdds/dds/domain/qos/RequesterQos.hpp>
 #include <fastdds/dds/rpc/exceptions.hpp>
 #include <fastdds/dds/rpc/interfaces/RpcServer.hpp>
+#include <fastdds/rtps/common/Property.hpp>
 #include <fastdds/rtps/transport/UDPv4TransportDescriptor.hpp>
 #include <fastdds/utils/IPFinder.hpp>
 
@@ -317,13 +318,30 @@ namespace urpc2_detail {
 static constexpr auto allowed_subnet_prefix = "192.168.192.";
 
 /*
- * 车内 Ethernet MTU 为 1500.  Fast DDS 默认会生成接近 64 KiB 的 UDP datagram;
- * 大 RPC payload 虽然仍会被分片, 但每个 RTPS fragment 本身过大, 突发流量下
- * 一个 socket buffer 只能容纳少数 fragment.  将单个 transport message 控制在
- * MTU 内后, Fast DDS 会透明地把任意大小的 DDS sample 拆成更多小 fragment 并在
- * 接收端重组; 这不限制 Urpc2 payload 大小.
+ * 车内 Ethernet MTU 为 1500.  让单个 RTPS message 落在 MTU 以内可以避免 IP 分片:
+ * IP 分片后只要丢一个分片, 整个 datagram 就报废, 在突发流量下会放大丢包.
+ *
+ * 关键: 这个预算只能加在 writer 的 `fastdds.max_message_size` 属性上, 绝不能写进
+ * transport 的 `maxMessageSize`.  两者性质完全不同 --
+ *
+ * - transport 的 `maxMessageSize` 是**硬门限**, 且收发两端都生效.  发送端超过它
+ *   (或超过 IPv4 datagram 的 65507 上限) 就发不出去; 接收端收到超长 datagram 会
+ *   截断进而解析失败.  两种情况都不打日志, 表现为 reliable reader 对着缺失的
+ *   fragment 无限 NACK_FRAG, RPC 调用方只看到超时.
+ * - writer 属性只参与 fragment 大小的反推, 超出它顶多让 IP 层多分一次片, 不丢包.
+ *
+ * 为什么一定要留余量: Fast DDS 的 `BaseWriter::calculate_max_payload_size()` 在
+ * 由 message 上限反推 fragment 大小时, 只为 RTPS header, INFO_DST, INFO_TS,
+ * DATA_FRAG header 和 HEARTBEAT 预留了固定开销, **完全没有为 inline QoS 预留**.
+ * 而 RPC reply 的 inline QoS 里有 PID_CONTENT_FILTER_INFO, 它的长度随「writer 匹配
+ * 到的不同 content filter 个数」增长 -- 每多一个 requester 就多一个 16 字节的
+ * filterSignature.  于是实际发出的 message 会比 writer 自己以为的大出几十字节:
+ * 只有一个 requester 时不多不少正好卡在上限, 第二个 requester 一上线就溢出.
+ *
+ * 所以 transport 门限保持 Fast DDS 默认的 65500, 与 MTU 目标彻底解耦: 即使 inline
+ * QoS 涨到上百字节, 也只是让 datagram 略微超过 MTU 而已, 不会静默丢包.
  */
-static constexpr std::uint32_t vehicle_udp_max_message_size = 1400;
+static constexpr std::uint32_t vehicle_writer_max_message_size = 1200;
 static constexpr std::uint32_t vehicle_udp_socket_buffer_size = 1024 * 1024;
 
 /*
@@ -398,7 +416,8 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
         }
 
         const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
-        udp->maxMessageSize = vehicle_udp_max_message_size;
+        // 不动 maxMessageSize: 它是收发两端的硬门限, 调小会让略微超限的 message
+        // 被静默丢弃.  MTU 目标改由 writer 的 fastdds.max_message_size 属性达成.
         udp->sendBufferSize = vehicle_udp_socket_buffer_size;
         udp->receiveBufferSize = vehicle_udp_socket_buffer_size;
         for (const auto& address: addresses) {
@@ -417,6 +436,19 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
 }
 
 /*
+ * 给 writer 设置分片预算, 令它按 MTU 而不是按 64 KiB 切分 sample.
+ *
+ * request 和 reply 两个方向都可能出现大 payload, 故 requester 和 replier 的
+ * writer 都要设.
+ */
+static void set_writer_fragment_budget(::eprosima::fastdds::dds::DataWriterQos& writer_qos) {
+    auto property = ::eprosima::fastdds::rtps::Property{};
+    property.name("fastdds.max_message_size");
+    property.value(std::to_string(vehicle_writer_max_message_size));
+    writer_qos.properties().properties().push_back(std::move(property));
+}
+
+/*
  * Requester 默认给 reply reader 配置 KEEP_ALL.  一旦某个分片回复永久缺少一个
  * fragment, reliable reader 会一直等待该序号, 后续完整回复也无法交付给 RPC
  * processing thread.  reply reader 只保留最新样本可让后续回复淘汰这个不完整的
@@ -432,6 +464,17 @@ static auto create_requester_qos() -> ::eprosima::fastdds::dds::RequesterQos {
     auto qos = ::eprosima::fastdds::dds::RequesterQos{};
     qos.reader_qos.history().kind = ::eprosima::fastdds::dds::KEEP_LAST_HISTORY_QOS;
     qos.reader_qos.history().depth = 1;
+    set_writer_fragment_budget(qos.writer_qos);
+    return qos;
+}
+
+/*
+ * Replier 的 reply writer 是大 payload 的主要来源 (例如地图列表), 同样需要按 MTU
+ * 切分.  其余 QoS 保持 ReplierQos 的默认值.
+ */
+static auto create_replier_qos() -> ::eprosima::fastdds::dds::ReplierQos {
+    auto qos = ::eprosima::fastdds::dds::ReplierQos{};
+    set_writer_fragment_budget(qos.writer_qos);
     return qos;
 }
 
@@ -584,7 +627,7 @@ class urpc2::Urpc2::Impl {
               const auto server = gen::create_ProcessorServer(
                   *this->participant_,
                   this->name_.c_str(),
-                  ::eprosima::fastdds::dds::ReplierQos{},
+                  create_replier_qos(),
                   0,
                   router
               );
