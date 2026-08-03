@@ -317,6 +317,16 @@ namespace urpc2_detail {
 static constexpr auto allowed_subnet_prefix = "192.168.192.";
 
 /*
+ * 车内 Ethernet MTU 为 1500.  Fast DDS 默认会生成接近 64 KiB 的 UDP datagram;
+ * 大 RPC payload 虽然仍会被分片, 但每个 RTPS fragment 本身过大, 突发流量下
+ * 一个 socket buffer 只能容纳少数 fragment.  将单个 transport message 控制在
+ * MTU 内后, Fast DDS 会透明地把任意大小的 DDS sample 拆成更多小 fragment 并在
+ * 接收端重组; 这不限制 Urpc2 payload 大小.
+ */
+static constexpr std::uint32_t vehicle_udp_max_message_size = 1400;
+static constexpr std::uint32_t vehicle_udp_socket_buffer_size = 1024 * 1024;
+
+/*
  * 判断是否启用上述网段限制: 环境变量 RBK_IN_CAR 存在且非空字符串时启用.
  *
  * 限制只在车上才成立, 而开发机, CI runner 和测试容器都没有 192.168.192.* 网卡,
@@ -388,6 +398,9 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
         }
 
         const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
+        udp->maxMessageSize = vehicle_udp_max_message_size;
+        udp->sendBufferSize = vehicle_udp_socket_buffer_size;
+        udp->receiveBufferSize = vehicle_udp_socket_buffer_size;
         for (const auto& address: addresses) {
             udp->interface_allowlist.emplace_back(address);
         }
