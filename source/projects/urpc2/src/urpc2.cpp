@@ -404,6 +404,31 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
 }
 
 /*
+ * Requester 默认给 reply reader 配置 KEEP_ALL.  一旦某个分片回复永久缺少一个
+ * fragment, reliable reader 会一直等待该序号, 后续完整回复也无法交付给 RPC
+ * processing thread.  reply reader 只保留最新样本可让后续回复淘汰这个不完整的
+ * 旧序号, 从而恢复调用链.
+ *
+ * 深度 1 要求每个 requester 同时最多有一个有效请求; CachedClient::call_mutex
+ * 在 call() 中保证这一点.  reader 仍需两个 cache: Fast DDS 会先为新分片申请
+ * cache, 随后才用 KEEP_LAST 淘汰旧样本.  request writer 保持 RequesterQos 的
+ * 默认 KEEP_ALL, 以免削弱尚未确认请求的重传能力.
+ */
+static auto create_requester_qos() -> ::eprosima::fastdds::dds::RequesterQos {
+    auto qos = ::eprosima::fastdds::dds::RequesterQos{};
+    qos.reader_qos.history().kind = ::eprosima::fastdds::dds::KEEP_LAST_HISTORY_QOS;
+    qos.reader_qos.history().depth = 1;
+
+    auto& limits = qos.reader_qos.resource_limits();
+    limits.max_samples = 2;
+    limits.max_instances = 1;
+    limits.max_samples_per_instance = 1;
+    limits.allocated_samples = 2;
+    limits.extra_samples = 1;
+    return qos;
+}
+
+/*
  * 销毁 participant 以及它仍然拥有的所有实体.
  *
  * 生成的 RPC 客户端和服务器通常会清理自己的 requester, replier 和 service
@@ -463,15 +488,24 @@ class urpc2::Urpc2::Impl {
     std::shared_ptr<::eprosima::fastdds::dds::rpc::RpcServer> server_;
     std::thread server_thread_;
 
+    struct CachedClient {
+        explicit CachedClient(std::shared_ptr<gen::Processor> processor)
+        : processor{std::move(processor)} {}
+
+        std::mutex call_mutex;
+        std::shared_ptr<gen::Processor> processor;
+    };
+
     /*
      * Client-side 缓存.
      *
      * 出站调用不再按次创建/销毁 participant, 而是: 整个实例懒创建一个专用的
      * client-side participant (首个出站调用时才建, 纯 server 实例零开销), 并按
      * receiver name 缓存生成的 client.  每个 client 持有自己的 requester 和
-     * 收发线程, 天然支持并发挂起多个请求, 因此同一 receiver 的所有调用共享
-     * 一个 client 即可.  server 掉线重连由 DDS 发现自动重匹配, 缓存条目无需
-     * 失效处理.
+     * 收发线程.  reply reader 使用 KEEP_LAST(1), 因此 CachedClient::call_mutex
+     * 将同一 receiver 的调用串行化, 防止并发回复互相覆盖; 不同 receiver 使用
+     * 不同缓存项, 仍可并发.  server 掉线重连由 DDS 发现自动重匹配, 缓存条目
+     * 无需失效处理.
      *
      * 不复用 server 侧的 participant_: DomainParticipant::create_service() 在
      * 同名 service 已存在时会失败, 复用会让"调用与自己同名的实例"这一场景
@@ -482,7 +516,7 @@ class urpc2::Urpc2::Impl {
      */
     std::mutex clients_mutex_;
     Participant client_participant_;
-    std::map<std::string, std::shared_ptr<gen::Processor>> clients_;
+    std::map<std::string, std::shared_ptr<CachedClient>> clients_;
 
     /*
      * 返回 receiver 对应的缓存 client, 缺失则创建并缓存.
@@ -491,7 +525,7 @@ class urpc2::Urpc2::Impl {
      * client.  任何本地失败 (工厂/participant/client) 统一翻译成 LocalError.
      * 创建失败不留残余缓存条目, 下次调用会重试.
      */
-    auto get_client(const std::string& receiver_name) -> std::shared_ptr<gen::Processor> {
+    auto get_client(const std::string& receiver_name) -> std::shared_ptr<CachedClient> {
         const auto lock = std::lock_guard<std::mutex>{this->clients_mutex_};
 
         const auto iter = this->clients_.find(receiver_name);
@@ -499,15 +533,15 @@ class urpc2::Urpc2::Impl {
             return iter->second;
         }
 
-        std::shared_ptr<gen::Processor> client;
+        std::shared_ptr<gen::Processor> processor;
         try {
             if (!this->client_participant_) {
                 this->client_participant_ = Participant{create_participant()};
             }
-            client = gen::create_ProcessorClient(
+            processor = gen::create_ProcessorClient(
                 *this->client_participant_,
                 receiver_name.c_str(),
-                ::eprosima::fastdds::dds::RequesterQos{}
+                create_requester_qos()
             );
         }
         catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
@@ -522,13 +556,14 @@ class urpc2::Urpc2::Impl {
                 "Failed to set up Urpc2 client for instance \""s + receiver_name + "\" (" + e.what() + ')'
             );
         }
-        if (!client) {
+        if (!processor) {
             URPC2_THROW(
                 urpc2::LocalError,
                 "Failed to create Urpc2 client for instance \""s + receiver_name + '"'
             );
         }
 
+        const auto client = std::make_shared<CachedClient>(std::move(processor));
         this->clients_.emplace(receiver_name, client);
         return client;
     }
@@ -620,13 +655,18 @@ class urpc2::Urpc2::Impl {
         // 已统一翻译为 LocalError.
         const auto client = this->get_client(receiver_name);
 
+        // reply reader 仅保留最新样本, 所以同一 requester 在任意时刻只允许一个
+        // 有效请求.  锁覆盖发请求、等待及取结果; 不同 receiver 使用不同的锁.
+        // 等锁属于本地排队, 不计入 reply timeout.
+        const auto call_lock = std::lock_guard<std::mutex>{client->call_mutex};
+
         // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
         // wait_for_matching —— 等 requester 与 replier 双向匹配上, 一旦匹配就立即
         // 返回 (最多阻塞 Fast DDS 内部默认的 3 秒). 于是:
         //   - 目标存在:   匹配就绪即发请求, 省去此前无条件的 5s 固定延迟;
         //   - 目标不存在: 匹配等待到点, send_request 返回失败 -> router() 的 future
         //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
-        auto future = client->router(handler_name, args);
+        auto future = client->processor->router(handler_name, args);
         if (future.wait_for(timeout) != std::future_status::ready) {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
