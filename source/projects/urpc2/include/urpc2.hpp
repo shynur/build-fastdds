@@ -115,6 +115,10 @@ class urpc2::Urpc2 {
     /**
      * @brief 调用具有指定 name 的 Urpc2 instance 上的 handler.
      *
+     * 可由多个线程调用.  指向不同 receiver 的调用可以并发执行; 指向同一 receiver
+     * 的调用会在本地串行化, 等待前一个调用完成后才发送.  @p timeout 从请求开始发送
+     * 后计算, 不包含等待同一 receiver 的前序调用所花的时间.
+     *
      * 所有失败都以 urpc2::Error (其根为 std::exception) 的子类抛出; 底层 Fast DDS
      * 的 RpcException 已在实现内被翻译, 不会外泄:
      *
