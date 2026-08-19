@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# scripts/gen-types.bash - 用 fastddsgen 为各测试用例的 IDL 生成类型/RPC 支持代码,
-# 就地输出到 <test>/src/types/ (这些生成物不入库, 仅在此步产生).
+# scripts/gen-types.bash - 用 fastddsgen 为各 IDL 生成类型/RPC 支持代码, 就地输出到
+# 各自的 src/types/.  tests/ 下的生成物不入库 (仅在此步产生); projects/urpc2/ 下的
+# 生成物入库, 此步相当于按当前 fastddsgen 刷新它们.
 #
 # 前提: fastddsgen 已在 PATH 中 (见 build-fastddsgen.bash), 或用 FASTDDSGEN 指定其路径.
 # fastddsgen 还需要一个 C 预处理器 (cpp); 若 PATH 中没有, 本脚本回退探测 gcc 附带的

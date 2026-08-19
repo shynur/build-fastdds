@@ -307,7 +307,7 @@ namespace urpc2_detail {
 
 
 /*
- * 开启网段限制时, 唯一允许通信的网段.
+ * 车内 (见 in_vehicle()) 唯一允许通信的网段.
  *
  * 车上的部署形态是固定的: 库跑在小车内的三个控制器上, 控制器之间由我们手工组成
  * 192.168.192.0/24 这一个局域网.  除此之外的网卡 (车载 4G, 调试用的 Wi-Fi,
@@ -316,6 +316,12 @@ namespace urpc2_detail {
  * locator.
  */
 static constexpr auto allowed_subnet_prefix = "192.168.192.";
+
+/*
+ * 车外 (开发机, CI runner, 测试容器) 唯一允许通信的地址: 回环.  此时 urpc2
+ * 流量只在本机进程之间流动, 不会离开主机.
+ */
+static constexpr auto loopback_ipv4 = "127.0.0.1";
 
 /*
  * 车内 Ethernet MTU 为 1500.  让单个 RTPS message 落在 MTU 以内可以避免 IP 分片:
@@ -345,14 +351,13 @@ static constexpr std::uint32_t vehicle_writer_max_message_size = 1200;
 static constexpr std::uint32_t vehicle_udp_socket_buffer_size = 1024 * 1024;
 
 /*
- * 判断是否启用上述网段限制: 环境变量 RBK_IN_CAR 存在且非空字符串时启用.
+ * 判断当前是否跑在车上: 环境变量 RBK_IN_CAR 存在且非空字符串时视为在车内.
  *
- * 限制只在车上才成立, 而开发机, CI runner 和测试容器都没有 192.168.192.* 网卡,
- * 无条件启用会让它们连 participant 都建不起来.  故以 RBK_IN_CAR 作为"当前跑在
- * 车内"的标志: 车上的启动环境设置它, 其余环境不设置, 于是默认退回 Fast DDS 的
- * builtin transport 行为 (所有网卡).
+ * 两种环境的通信范围不同 (见 create_participant()): 车内限制在
+ * allowed_subnet_prefix 网段, 车外 (开发机, CI runner, 测试容器) 限制在
+ * loopback_ipv4.  RBK_IN_CAR 只是这个开关; 网段与回环地址都写死在代码里.
  */
-static auto subnet_restriction_enabled() -> bool {
+static auto in_vehicle() -> bool {
     const auto *const in_car = std::getenv("RBK_IN_CAR");
     URPC2_LOG_INFO(
         urpc2_detail::entity("RBK_IN_CAR") + '='
@@ -384,18 +389,18 @@ static auto find_allowed_ipv4s() -> std::vector<std::string> {
 }
 
 /*
- * 创建 participant; 若 subnet_restriction_enabled(), 则限制在 allowed_subnet_prefix
- * 网段内通信.
+ * 创建 participant; 通信始终被限制在单一范围内: 车内在 allowed_subnet_prefix
+ * 网段, 车外在 loopback_ipv4 (仅本机进程之间).
  *
  * 限制的做法是关掉 builtin transport, 换成一个自建的 UDPv4 transport, 并把它的
- * interface allowlist 填成本机在该网段上的地址.  allowlist 同时约束收和发,
- * 于是用户数据和 builtin 的发现报文 (含发现用的多播) 都只经过这张网卡.
- * 另外打开 ignore_non_matching_locators, 丢弃对端宣告的、本机 transport 无法
- * 匹配的 locator, 避免为网段外的地址保留无用的 sender resource.
+ * interface allowlist 填成允许范围内的地址.  allowlist 同时约束收和发, 于是
+ * 用户数据和 builtin 的发现报文 (含发现用的多播) 都只经过这些接口.  另外打开
+ * ignore_non_matching_locators, 丢弃对端宣告的、本机 transport 无法匹配的
+ * locator, 避免为范围外的地址保留无用的 sender resource.
  *
- * 启用限制而本机在该网段上没有地址时直接失败, 而不是静默退回到"所有网卡":
- * 后者会让配错网络的控制器看起来能通, 却把报文发到了不该去的地方, 排查成本
- * 远高于启动即报错.  未启用限制时用默认 QoS, 即 Fast DDS 原本的所有网卡行为.
+ * 车内本机在该网段上没有地址时直接失败, 而不是静默退回到"所有网卡": 后者会让
+ * 配错网络的控制器看起来能通, 却把报文发到了不该去的地方, 排查成本远高于启动
+ * 即报错.
  */
 static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant * {
     const auto factory = ::eprosima::fastdds::dds::DomainParticipantFactory::get_shared_instance();
@@ -403,9 +408,9 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
         URPC2_THROW(std::runtime_error, "Failed to get Fast DDS participant factory");
     }
 
-    auto qos = ::eprosima::fastdds::dds::DomainParticipantQos{};
-    if (subnet_restriction_enabled()) {
-        const auto addresses = find_allowed_ipv4s();
+    auto addresses = std::vector<std::string>{};
+    if (in_vehicle()) {
+        addresses = find_allowed_ipv4s();
         if (addresses.empty()) {
             URPC2_THROW(
                 std::runtime_error,
@@ -414,19 +419,23 @@ static auto create_participant() -> ::eprosima::fastdds::dds::DomainParticipant 
                 + "0/24; urpc2 only communicates on that subnet in the car"
             );
         }
-
-        const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
-        // 不动 maxMessageSize: 它是收发两端的硬门限, 调小会让略微超限的 message
-        // 被静默丢弃.  MTU 目标改由 writer 的 fastdds.max_message_size 属性达成.
-        udp->sendBufferSize = vehicle_udp_socket_buffer_size;
-        udp->receiveBufferSize = vehicle_udp_socket_buffer_size;
-        for (const auto& address: addresses) {
-            udp->interface_allowlist.emplace_back(address);
-        }
-        qos.transport().use_builtin_transports = false;
-        qos.transport().user_transports.push_back(udp);
-        qos.wire_protocol().ignore_non_matching_locators = true;
+    } else {
+        addresses.emplace_back(loopback_ipv4);
     }
+
+    const auto udp = std::make_shared<::eprosima::fastdds::rtps::UDPv4TransportDescriptor>();
+    // 不动 maxMessageSize: 它是收发两端的硬门限, 调小会让略微超限的 message
+    // 被静默丢弃.  MTU 目标改由 writer 的 fastdds.max_message_size 属性达成.
+    udp->sendBufferSize = vehicle_udp_socket_buffer_size;
+    udp->receiveBufferSize = vehicle_udp_socket_buffer_size;
+    for (const auto& address: addresses) {
+        udp->interface_allowlist.emplace_back(address);
+    }
+
+    auto qos = ::eprosima::fastdds::dds::DomainParticipantQos{};
+    qos.transport().use_builtin_transports = false;
+    qos.transport().user_transports.push_back(udp);
+    qos.wire_protocol().ignore_non_matching_locators = true;
 
     auto *const participant = factory->create_participant(0, qos);
     if (participant == nullptr) {
