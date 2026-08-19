@@ -24,5 +24,5 @@ DDS (`dds/`) 与 RPC (`rpc/`) 两个用例.  每个用例只提交 IDL 与手写
 
 ```sh
 export PATH="$(bash source/scripts/build-fastddsgen.bash):$PATH"   # 构建 fastddsgen (版本取自 fastdds.repos)
-bash source/scripts/gen-types.bash                                  # 就地生成到 tests/*/src/types/
+bash source/scripts/gen-types.bash                                  # 就地生成到 tests/*/src/types/ 与 projects/urpc2/src/types/
 ```
