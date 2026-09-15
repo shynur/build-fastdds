@@ -108,6 +108,9 @@ class urpc2::Urpc2 {
     /**
      * @brief 在此端点上注册或替换具名处理器.
      *
+     * 处理器在 server 的请求处理线程池 (当前 3 个线程) 中执行, 多个并发调用
+     * 会让多个处理器 (或同一处理器) 并行运行; 处理器若访问共享状态, 需自行同步.
+     *
      * @throws std::invalid_argument 如果 @p handler 不可调用.
      */
     void register_handler(const std::string& handler_name, Handler handler);
@@ -116,8 +119,8 @@ class urpc2::Urpc2 {
      * @brief 调用具有指定 name 的 Urpc2 instance 上的 handler.
      *
      * 可由多个线程调用.  指向不同 receiver 的调用可以并发执行; 指向同一 receiver
-     * 的调用会在本地串行化, 等待前一个调用完成后才发送.  @p timeout 从请求开始发送
-     * 后计算, 不包含等待同一 receiver 的前序调用所花的时间.
+     * 的调用最多 4 个同时在途, 超出的在本地排队, 等前序调用腾出位置后才发送.
+     * @p timeout 从请求开始发送后计算, 不包含本地排队所花的时间.
      *
      * 所有失败都以 urpc2::Error (其根为 std::exception) 的子类抛出; 底层 Fast DDS
      * 的 RpcException 已在实现内被翻译, 不会外泄:

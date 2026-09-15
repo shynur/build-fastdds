@@ -1,6 +1,7 @@
 #include "urpc2.hpp"
 
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -458,21 +459,39 @@ static void set_writer_fragment_budget(::eprosima::fastdds::dds::DataWriterQos& 
 }
 
 /*
+ * 同一 receiver 允许同时在途的调用数.  CachedClient 按此发放调用许可, 超出的
+ * 调用在本地排队 (见 Impl::call()).  reply reader 的 history 深度取其两倍:
+ * 除了在途回复, 还要为同名 server 的重复回复 (见 urpc2.hpp: 同名实例都会应答,
+ * 先到者胜出, 其余被丢弃) 和超时调用的迟到回复留出位置, 免得它们顶掉尚未被
+ * processing thread 取走的有效回复.
+ */
+static constexpr std::size_t max_concurrent_calls_per_receiver = 4;
+static constexpr std::size_t reply_history_depth = 2 * max_concurrent_calls_per_receiver;
+
+/*
+ * server 处理入站请求的线程池大小: 同一 instance 的多个调用可并行执行.
+ * replier 的 request reader 默认 KEEP_ALL (见 ReplierQos 构造函数), 可安全积压
+ * 在途请求.  handler 在 dispatch() 的锁外执行, 其共享状态由用户自行同步.
+ */
+static constexpr std::size_t server_thread_pool_size = 3;
+
+/*
  * Requester 默认给 reply reader 配置 KEEP_ALL.  一旦某个分片回复永久缺少一个
  * fragment, reliable reader 会一直等待该序号, 后续完整回复也无法交付给 RPC
- * processing thread.  reply reader 只保留最新样本可让后续回复淘汰这个不完整的
- * 旧序号, 从而恢复调用链.
+ * processing thread.  KEEP_LAST 可让后续回复淘汰这个不完整的旧序号, 从而恢复
+ * 调用链; 深度大于 1 时恢复更慢 (要积累更多后续回复才轮到淘汰), 但调用的
+ * timeout 机制兜住了这个代价.
  *
- * 深度 1 要求每个 requester 同时最多有一个有效请求; CachedClient::call_mutex
- * 在 call() 中保证这一点.  不收紧 reader resource limits: reply writer 的全局
- * 序列空间会让发给其它 requester 的回复暂时计入 unknown missing changes;
- * max_samples 太小会在 KEEP_LAST 淘汰旧样本前直接拒绝新回复.  request writer
- * 保持 RequesterQos 的默认 KEEP_ALL, 以免削弱尚未确认请求的重传能力.
+ * 深度 reply_history_depth 允许同一 requester 有多个在途请求 (见上).  不收紧
+ * reader resource limits: reply writer 的全局序列空间会让发给其它 requester 的
+ * 回复暂时计入 unknown missing changes; max_samples 太小会在 KEEP_LAST 淘汰旧
+ * 样本前直接拒绝新回复.  request writer 保持 RequesterQos 的默认 KEEP_ALL, 以免
+ * 削弱尚未确认请求的重传能力.
  */
 static auto create_requester_qos() -> ::eprosima::fastdds::dds::RequesterQos {
     auto qos = ::eprosima::fastdds::dds::RequesterQos{};
     qos.reader_qos.history().kind = ::eprosima::fastdds::dds::KEEP_LAST_HISTORY_QOS;
-    qos.reader_qos.history().depth = 1;
+    qos.reader_qos.history().depth = reply_history_depth;
     set_writer_fragment_budget(qos.writer_qos);
     return qos;
 }
@@ -551,8 +570,44 @@ class urpc2::Urpc2::Impl {
         explicit CachedClient(std::shared_ptr<gen::Processor> processor)
         : processor{std::move(processor)} {}
 
-        std::mutex call_mutex;
         std::shared_ptr<gen::Processor> processor;
+
+        /*
+         * 发送阶段 (router()/send_request) 的串行锁: 其中 wait_for_matching 对
+         * 并发等待者不安全, 详见 call().
+         */
+        std::mutex send_mutex;
+
+        /*
+         * RAII 在途调用许可, 上限 max_concurrent_calls_per_receiver.  reply
+         * reader 的 history 深度有限 (reply_history_depth): 允许任意多个在途
+         * 请求会让并发回复互相淘汰, 于是许可把在途数压在深度以内, 超出的调用
+         * 在构造处本地排队.  C++17 没有 std::counting_semaphore, 用 mutex +
+         * condition_variable 实现.
+         */
+        class CallSlot {
+            CachedClient& client_;
+          public:
+            explicit CallSlot(CachedClient& client): client_{client} {
+                auto lock = std::unique_lock<std::mutex>{this->client_.call_slots_mutex_};
+                this->client_.call_slot_available_.wait(
+                    lock, [this] { return this->client_.call_slots_remaining_ > 0; });
+                --this->client_.call_slots_remaining_;
+            }
+            ~CallSlot() {
+                {
+                    const auto lock = std::lock_guard<std::mutex>{this->client_.call_slots_mutex_};
+                    ++this->client_.call_slots_remaining_;
+                }
+                this->client_.call_slot_available_.notify_one();
+            }
+            CallSlot(const CallSlot&) = delete;
+            auto operator=(const CallSlot&) -> CallSlot& = delete;
+        };
+      private:
+        std::mutex call_slots_mutex_;
+        std::condition_variable call_slot_available_;
+        std::size_t call_slots_remaining_ = max_concurrent_calls_per_receiver;
     };
 
     /*
@@ -561,10 +616,9 @@ class urpc2::Urpc2::Impl {
      * 出站调用不再按次创建/销毁 participant, 而是: 整个实例懒创建一个专用的
      * client-side participant (首个出站调用时才建, 纯 server 实例零开销), 并按
      * receiver name 缓存生成的 client.  每个 client 持有自己的 requester 和
-     * 收发线程.  reply reader 使用 KEEP_LAST(1), 因此 CachedClient::call_mutex
-     * 将同一 receiver 的调用串行化, 防止并发回复互相覆盖; 不同 receiver 使用
-     * 不同缓存项, 仍可并发.  server 掉线重连由 DDS 发现自动重匹配, 缓存条目
-     * 无需失效处理.
+     * 收发线程.  同一 receiver 的并发在途调用有上限 (见 CachedClient::CallSlot),
+     * 超出的在本地排队; 不同 receiver 使用不同缓存项, 互不影响.  server 掉线
+     * 重连由 DDS 发现自动重匹配, 缓存条目无需失效处理.
      *
      * 不复用 server 侧的 participant_: DomainParticipant::create_service() 在
      * 同名 service 已存在时会失败, 复用会让"调用与自己同名的实例"这一场景
@@ -637,7 +691,7 @@ class urpc2::Urpc2::Impl {
                   *this->participant_,
                   this->name_.c_str(),
                   create_replier_qos(),
-                  0,
+                  server_thread_pool_size,
                   router
               );
               if (!server) {
@@ -714,10 +768,11 @@ class urpc2::Urpc2::Impl {
         // 已统一翻译为 LocalError.
         const auto client = this->get_client(receiver_name);
 
-        // reply reader 仅保留最新样本, 所以同一 requester 在任意时刻只允许一个
-        // 有效请求.  锁覆盖发请求、等待及取结果; 不同 receiver 使用不同的锁.
-        // 等锁属于本地排队, 不计入 reply timeout.
-        const auto call_lock = std::lock_guard<std::mutex>{client->call_mutex};
+        // 取该 receiver 的一个在途调用许可 (上限 max_concurrent_calls_per_receiver):
+        // reply reader 的 history 深度有限, 无上限的并发回复会互相淘汰.  许可覆盖
+        // 发请求、等待及取结果; 不同 receiver 用各自的许可计数.  等许可属于本地
+        // 排队, 不计入 reply timeout.
+        const auto call_slot = CachedClient::CallSlot{*client};
 
         // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
         // wait_for_matching —— 等 requester 与 replier 双向匹配上, 一旦匹配就立即
@@ -725,7 +780,16 @@ class urpc2::Urpc2::Impl {
         //   - 目标存在:   匹配就绪即发请求, 省去此前无条件的 5s 固定延迟;
         //   - 目标不存在: 匹配等待到点, send_request 返回失败 -> router() 的 future
         //     立即携带 RpcBrokenPipeException, 下面 get() 将其翻译为 ServerNotFound (快速失败).
-        auto future = client->processor->router(handler_name, args);
+        //
+        // 发送阶段要串行: 上游 RequesterImpl::wait_for_matching 用单一
+        // matched_status_changed_ 标志通知匹配事件, 并发等待者会互相消耗该标志,
+        // 没抢到的线程即使匹配已就绪也会白等整个匹配预算再误报 broken pipe.
+        // 已匹配时 wait_for_matching 立即返回, 这把锁只持有微秒级; 耗时的回复
+        // 等待仍在许可下并发.
+        auto future = [&] {
+            const auto send_lock = std::lock_guard<std::mutex>{client->send_mutex};
+            return client->processor->router(handler_name, args);
+        }();
         if (future.wait_for(timeout) != std::future_status::ready) {
             // 放弃这个 future 即可: client 是缓存的, 迟到的回复 (若有) 会由其
             // 收发线程投递到已被放弃的 promise 上, 随后条目被移除, 不会串扰
