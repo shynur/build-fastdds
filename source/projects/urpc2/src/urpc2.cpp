@@ -1,5 +1,6 @@
 #include "urpc2.hpp"
 
+#include <cerrno>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -459,21 +460,40 @@ static void set_writer_fragment_budget(::eprosima::fastdds::dds::DataWriterQos& 
 }
 
 /*
- * 同一 receiver 允许同时在途的调用数.  CachedClient 按此发放调用许可, 超出的
- * 调用在本地排队 (见 Impl::call()).  reply reader 的 history 深度取其两倍:
- * 除了在途回复, 还要为同名 server 的重复回复 (见 urpc2.hpp: 同名实例都会应答,
- * 先到者胜出, 其余被丢弃) 和超时调用的迟到回复留出位置, 免得它们顶掉尚未被
- * processing thread 取走的有效回复.
+ * 并发度由环境变量在运行期配置:
+ *
+ * - URPC2_CLIENT_THREADS: 同一 receiver 允许同时在途的调用数.  CachedClient
+ *   按此发放调用许可 (见 CachedClient::CallSlot), 超出的调用在本地排队.
+ *   reply reader 的 history 深度取其两倍 (见 create_requester_qos()).
+ * - URPC2_SERVER_THREADS: server 处理入站请求的线程池大小.  replier 的
+ *   request reader 默认 KEEP_ALL (见 ReplierQos 构造函数), 可安全积压在途
+ *   请求.  handler 在 dispatch() 的锁外执行, 其共享状态由用户自行同步.
+ *
+ * unset, 空字符串或非法取值 (非数字字符, 0, 溢出) 都静默使用默认值 1, 即
+ * 最初的串行行为: client 对同一 receiver 同时只有一个在途调用, server 单线程
+ * 逐个处理请求.
  */
-static constexpr std::size_t max_concurrent_calls_per_receiver = 4;
-static constexpr std::size_t reply_history_depth = 2 * max_concurrent_calls_per_receiver;
-
-/*
- * server 处理入站请求的线程池大小: 同一 instance 的多个调用可并行执行.
- * replier 的 request reader 默认 KEEP_ALL (见 ReplierQos 构造函数), 可安全积压
- * 在途请求.  handler 在 dispatch() 的锁外执行, 其共享状态由用户自行同步.
- */
-static constexpr std::size_t server_thread_pool_size = 3;
+static auto configured_threads(const char* const env_name) -> std::size_t {
+    const auto *const value = std::getenv(env_name);
+    URPC2_LOG_INFO(
+        urpc2_detail::entity(env_name) + '='
+        + urpc2_detail::value(value == nullptr ? "" : value)
+    );
+    if (value == nullptr || value[0] == '\0') {
+        return 1;
+    }
+    for (const auto *c = value; *c != '\0'; ++c) {
+        if (*c < '0' || *c > '9') {
+            return 1;
+        }
+    }
+    errno = 0;
+    const auto parsed = std::strtoul(value, nullptr, 10);
+    if (errno == ERANGE || parsed < 1) {
+        return 1;
+    }
+    return parsed;
+}
 
 /*
  * Requester 默认给 reply reader 配置 KEEP_ALL.  一旦某个分片回复永久缺少一个
@@ -482,16 +502,19 @@ static constexpr std::size_t server_thread_pool_size = 3;
  * 调用链; 深度大于 1 时恢复更慢 (要积累更多后续回复才轮到淘汰), 但调用的
  * timeout 机制兜住了这个代价.
  *
- * 深度 reply_history_depth 允许同一 requester 有多个在途请求 (见上).  不收紧
- * reader resource limits: reply writer 的全局序列空间会让发给其它 requester 的
- * 回复暂时计入 unknown missing changes; max_samples 太小会在 KEEP_LAST 淘汰旧
- * 样本前直接拒绝新回复.  request writer 保持 RequesterQos 的默认 KEEP_ALL, 以免
- * 削弱尚未确认请求的重传能力.
+ * 深度取在途调用上限 (max_concurrent_calls, 见 configured_threads()) 的两倍:
+ * 除了在途回复, 还要为同名 server 的重复回复 (见 urpc2.hpp: 同名实例都会应答,
+ * 先到者胜出, 其余被丢弃) 和超时调用的迟到回复留出位置, 免得它们顶掉尚未被
+ * processing thread 取走的有效回复.  不收紧 reader resource limits: reply
+ * writer 的全局序列空间会让发给其它 requester 的回复暂时计入 unknown missing
+ * changes; max_samples 太小会在 KEEP_LAST 淘汰旧样本前直接拒绝新回复.
+ * request writer 保持 RequesterQos 的默认 KEEP_ALL, 以免削弱尚未确认请求的
+ * 重传能力.
  */
-static auto create_requester_qos() -> ::eprosima::fastdds::dds::RequesterQos {
+static auto create_requester_qos(const std::size_t max_concurrent_calls) -> ::eprosima::fastdds::dds::RequesterQos {
     auto qos = ::eprosima::fastdds::dds::RequesterQos{};
     qos.reader_qos.history().kind = ::eprosima::fastdds::dds::KEEP_LAST_HISTORY_QOS;
-    qos.reader_qos.history().depth = reply_history_depth;
+    qos.reader_qos.history().depth = 2 * max_concurrent_calls;
     set_writer_fragment_budget(qos.writer_qos);
     return qos;
 }
@@ -548,6 +571,9 @@ class urpc2::Urpc2::Impl {
     };
 
     const std::string name_;
+    // 见 configured_threads(): 同一 receiver 的在途调用上限 / server 请求处理线程数.
+    const std::size_t client_threads_;
+    const std::size_t server_threads_;
     mutable std::mutex handlers_mutex_;
     std::map<std::string, std::shared_ptr<Handler>> handlers_ = {
         {
@@ -567,8 +593,9 @@ class urpc2::Urpc2::Impl {
     std::thread server_thread_;
 
     struct CachedClient {
-        explicit CachedClient(std::shared_ptr<gen::Processor> processor)
-        : processor{std::move(processor)} {}
+        CachedClient(std::shared_ptr<gen::Processor> processor, const std::size_t max_concurrent_calls)
+        : processor{std::move(processor)},
+          call_slots_remaining_{max_concurrent_calls} {}
 
         std::shared_ptr<gen::Processor> processor;
 
@@ -579,11 +606,11 @@ class urpc2::Urpc2::Impl {
         std::mutex send_mutex;
 
         /*
-         * RAII 在途调用许可, 上限 max_concurrent_calls_per_receiver.  reply
-         * reader 的 history 深度有限 (reply_history_depth): 允许任意多个在途
-         * 请求会让并发回复互相淘汰, 于是许可把在途数压在深度以内, 超出的调用
-         * 在构造处本地排队.  C++17 没有 std::counting_semaphore, 用 mutex +
-         * condition_variable 实现.
+         * RAII 在途调用许可, 上限为 URPC2_CLIENT_THREADS 配置的值 (见
+         * configured_threads()).  reply reader 的 history 深度有限 (取上限的
+         * 两倍): 允许任意多个在途请求会让并发回复互相淘汰, 于是许可把在途数
+         * 压在深度以内, 超出的调用在构造处本地排队.  C++17 没有
+         * std::counting_semaphore, 用 mutex + condition_variable 实现.
          */
         class CallSlot {
             CachedClient& client_;
@@ -607,7 +634,7 @@ class urpc2::Urpc2::Impl {
       private:
         std::mutex call_slots_mutex_;
         std::condition_variable call_slot_available_;
-        std::size_t call_slots_remaining_ = max_concurrent_calls_per_receiver;
+        std::size_t call_slots_remaining_;
     };
 
     /*
@@ -654,7 +681,7 @@ class urpc2::Urpc2::Impl {
             processor = gen::create_ProcessorClient(
                 *this->client_participant_,
                 receiver_name.c_str(),
-                create_requester_qos()
+                create_requester_qos(this->client_threads_)
             );
         }
         catch (const ::eprosima::fastdds::dds::rpc::RpcException& e) {
@@ -676,13 +703,15 @@ class urpc2::Urpc2::Impl {
             );
         }
 
-        const auto client = std::make_shared<CachedClient>(std::move(processor));
+        const auto client = std::make_shared<CachedClient>(std::move(processor), this->client_threads_);
         this->clients_.emplace(receiver_name, client);
         return client;
     }
   public:
     explicit Impl(const std::string& name)
     : name_{name},
+      client_threads_{configured_threads("URPC2_CLIENT_THREADS")},
+      server_threads_{configured_threads("URPC2_SERVER_THREADS")},
       participant_{create_participant()},
       server_{
           [this] {
@@ -691,7 +720,7 @@ class urpc2::Urpc2::Impl {
                   *this->participant_,
                   this->name_.c_str(),
                   create_replier_qos(),
-                  server_thread_pool_size,
+                  this->server_threads_,
                   router
               );
               if (!server) {
@@ -768,10 +797,10 @@ class urpc2::Urpc2::Impl {
         // 已统一翻译为 LocalError.
         const auto client = this->get_client(receiver_name);
 
-        // 取该 receiver 的一个在途调用许可 (上限 max_concurrent_calls_per_receiver):
-        // reply reader 的 history 深度有限, 无上限的并发回复会互相淘汰.  许可覆盖
-        // 发请求、等待及取结果; 不同 receiver 用各自的许可计数.  等许可属于本地
-        // 排队, 不计入 reply timeout.
+        // 取该 receiver 的一个在途调用许可 (上限为 URPC2_CLIENT_THREADS 配置的
+        // 值): reply reader 的 history 深度有限, 无上限的并发回复会互相淘汰.
+        // 许可覆盖发请求、等待及取结果; 不同 receiver 用各自的许可计数.  等许可
+        // 属于本地排队, 不计入 reply timeout.
         const auto call_slot = CachedClient::CallSlot{*client};
 
         // 不再盲目 sleep 等发现: client->router() 内部的 send_request 会先
