@@ -593,10 +593,22 @@ class urpc2::Urpc2::Impl {
     std::thread server_thread_;
 
     struct CachedClient {
-        CachedClient(std::shared_ptr<gen::Processor> processor, const std::size_t max_concurrent_calls)
-        : processor{std::move(processor)},
+        CachedClient(
+            Participant participant,
+            std::shared_ptr<gen::Processor> processor,
+            const std::size_t max_concurrent_calls
+        )
+        : participant{std::move(participant)},
+          processor{std::move(processor)},
           call_slots_remaining_{max_concurrent_calls} {}
 
+        /*
+         * 该 receiver 专用的 client-side participant (见 clients_ 的注释).
+         *
+         * 声明顺序即析构依赖: processor 析构时要回到 participant 上删除自己的
+         * requester/service, 故 participant 声明在前, 比 processor 后析构.
+         */
+        Participant participant;
         std::shared_ptr<gen::Processor> processor;
 
         /*
@@ -638,24 +650,29 @@ class urpc2::Urpc2::Impl {
     };
 
     /*
-     * Client-side 缓存.
+     * Client-side 缓存: 按 receiver name 缓存生成的 client; 后续对同一 receiver
+     * 的调用直接复用, 不再按次创建/销毁 participant.  每个 client 持有自己的
+     * participant, requester 和收发线程; participant 在首个发往该 receiver 的
+     * 出站调用时才创建, 纯 server 实例零开销.
      *
-     * 出站调用不再按次创建/销毁 participant, 而是: 整个实例懒创建一个专用的
-     * client-side participant (首个出站调用时才建, 纯 server 实例零开销), 并按
-     * receiver name 缓存生成的 client.  每个 client 持有自己的 requester 和
-     * 收发线程.  同一 receiver 的并发在途调用有上限 (见 CachedClient::CallSlot),
-     * 超出的在本地排队; 不同 receiver 使用不同缓存项, 互不影响.  server 掉线
-     * 重连由 DDS 发现自动重匹配, 缓存条目无需失效处理.
+     * 为什么每个 receiver 各用一个 participant, 而不是整个实例共享一个: 生成的
+     * ProcessorClient 构造时总会执行 register_service_type("urpc2::gen::Processor"),
+     * 而 Fast DDS 不允许在同一 participant 上重复注册同名 service type -- 即便两次
+     * 注册的类型完全相同, 其相等性比较也不会通过 (Fast DDS 3.4.3,
+     * DomainParticipantImpl::register_service_type), 共享 participant 时第二个
+     * receiver 的 client 必然创建失败.  每个 receiver 各建 participant 后, 注册在
+     * 各自的 participant 上恰好发生一次.  该生成代码由 fastddsgen 产出, 按仓库
+     * 约定不手改 (见 README「生成文件」一节), 故在手写层绕过.
+     *
+     * 同一 receiver 的并发在途调用有上限 (见 CachedClient::CallSlot), 超出的在
+     * 本地排队; 不同 receiver 使用不同缓存项, 互不影响.  server 掉线重连由 DDS
+     * 发现自动重匹配, 缓存条目无需失效处理.
      *
      * 不复用 server 侧的 participant_: DomainParticipant::create_service() 在
      * 同名 service 已存在时会失败, 复用会让"调用与自己同名的实例"这一场景
      * 直接建不出 client.
-     *
-     * 声明顺序即析构依赖: clients_ 中的 client 析构时要回到 client_participant_
-     * 上删除自己的 requester/service, 故 clients_ 声明在后, 先于 participant 析构.
      */
     std::mutex clients_mutex_;
-    Participant client_participant_;
     std::map<std::string, std::shared_ptr<CachedClient>> clients_;
 
     /*
@@ -673,13 +690,12 @@ class urpc2::Urpc2::Impl {
             return iter->second;
         }
 
+        Participant participant;
         std::shared_ptr<gen::Processor> processor;
         try {
-            if (!this->client_participant_) {
-                this->client_participant_ = Participant{create_participant()};
-            }
+            participant = Participant{create_participant()};
             processor = gen::create_ProcessorClient(
-                *this->client_participant_,
+                *participant,
                 receiver_name.c_str(),
                 create_requester_qos(this->client_threads_)
             );
@@ -703,7 +719,8 @@ class urpc2::Urpc2::Impl {
             );
         }
 
-        const auto client = std::make_shared<CachedClient>(std::move(processor), this->client_threads_);
+        const auto client = std::make_shared<CachedClient>(
+            std::move(participant), std::move(processor), this->client_threads_);
         this->clients_.emplace(receiver_name, client);
         return client;
     }
